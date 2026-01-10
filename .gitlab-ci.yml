@@ -3,21 +3,38 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  DOCKER_BUILDKIT: 1
 
 docker-build:
   stage: build
-  image: docker:latest
-  timeout: 60m
-  script:
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  timeout: 30m
+  before_script:
     - docker info
+  script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker buildx create --use --name builderx || true
     - |
       if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
         TAG="latest"
       else
         TAG="$CI_COMMIT_REF_NAME"
       fi
-      docker buildx build --pull -t "$CI_REGISTRY_IMAGE:$TAG" --push .
+    - docker buildx create --use --name builderx --driver docker-container || docker buildx use builderx
+    - |
+      docker buildx build \
+        --platform linux/amd64 \
+        --cache-from type=registry,ref=$CI_REGISTRY_IMAGE:buildcache \
+        --cache-to type=registry,ref=$CI_REGISTRY_IMAGE:buildcache,mode=max \
+        -t "$CI_REGISTRY_IMAGE:$TAG" \
+        --push \
+        .
   tags:
     - docker
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
