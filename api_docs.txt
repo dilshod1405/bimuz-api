@@ -1,0 +1,438 @@
+================================================================================
+BIMUZ API DOCUMENTATION
+================================================================================
+
+NOTE: This file is maintained in parallel with api_docs.yml
+      Both files contain the same information in different formats.
+      When updating API documentation, please update both files.
+
+Version: 1.0
+Base URL: /api/v1/
+
+================================================================================
+INTERACTIVE API DOCUMENTATION
+================================================================================
+
+Interactive API documentation is available via Swagger UI and ReDoc:
+
+Swagger UI:
+    URL: http://localhost:8000/swagger/
+    Description: Interactive API documentation with "Try it out" functionality
+    Features: Test endpoints directly from the browser, view request/response
+              schemas, and authenticate using JWT Bearer tokens
+
+ReDoc:
+    URL: http://localhost:8000/redoc/
+    Description: Beautiful, responsive API documentation
+    Features: Clean, readable documentation with search functionality
+
+OpenAPI Schema:
+    JSON: http://localhost:8000/swagger.json
+    YAML: http://localhost:8000/swagger.yaml
+    Description: Machine-readable OpenAPI 3.0 schema for API clients
+
+Note: Replace localhost:8000 with your actual server domain in production.
+
+================================================================================
+AUTHENTICATION
+================================================================================
+
+All protected endpoints require JWT authentication. Include the access token
+in the Authorization header:
+
+    Authorization: Bearer <access_token>
+
+Access tokens expire after 1 hour. Use the refresh token endpoint to get a
+new access token.
+
+Refresh tokens expire after 7 days and are automatically rotated on use.
+
+================================================================================
+EMPLOYEE AUTHENTICATION APIs
+================================================================================
+
+1. EMPLOYEE REGISTRATION
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/register/
+Authentication: Not required
+Description: Register a new employee account with user and employee profile
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "email": "employee@example.com",
+        "first_name": "John",
+        "last_name": "Doe",
+        "password": "SecurePassword123!",
+        "password_confirm": "SecurePassword123!",
+        "full_name": "John Doe",
+        "role": "mentor",
+        "speciality_id": "revit_architecture",
+        "avatar": null  // Optional, can be uploaded as multipart/form-data
+    }
+
+Required Fields:
+    - email: Valid email address (unique)
+    - first_name: String, max 150 characters
+    - last_name: String, max 150 characters
+    - password: String, must pass Django password validators
+    - password_confirm: Must match password
+    - full_name: String, max 255 characters
+    - role: One of: "dasturchi", "direktor", "administrator", "sotuv_agenti", 
+            "mentor", "assistent"
+
+Conditional Fields:
+    - speciality_id: Required only if role="mentor"
+                     Options: "revit_architecture", "revit_structure", 
+                             "tekla_structure"
+                     Must be null/empty for non-mentor roles
+
+Optional Fields:
+    - avatar: Image file (upload via multipart/form-data)
+
+Success Response (201 Created):
+    {
+        "success": true,
+        "message": "Employee registered successfully.",
+        "data": {
+            "employee": {
+                "id": 1,
+                "email": "employee@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "full_name": "John Doe",
+                "role": "mentor",
+                "role_display": "Mentor",
+                "speciality_id": "revit_architecture",
+                "speciality_display": "Revit Architecture",
+                "avatar": null,
+                "avatar_url": null,
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            },
+            "tokens": {
+                "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "email": ["Employee with this email already exists."],
+                "password_confirm": ["Passwords do not match."],
+                "speciality_id": ["Speciality is required for Mentors."]
+            }
+        }
+
+Validation Rules:
+    - Email must be unique across all users
+    - Password must meet Django's password validation requirements
+    - Password and password_confirm must match
+    - If role is "mentor", speciality_id is required
+    - If role is not "mentor", speciality_id must be null/empty
+
+
+2. EMPLOYEE LOGIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/login/
+Authentication: Not required
+Description: Authenticate an employee and receive JWT tokens
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "email": "employee@example.com",
+        "password": "SecurePassword123!"
+    }
+
+Required Fields:
+    - email: Valid email address of registered employee
+    - password: User's password
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Login successful.",
+        "data": {
+            "employee": {
+                "id": 1,
+                "email": "employee@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "full_name": "John Doe",
+                "role": "mentor",
+                "role_display": "Mentor",
+                "speciality_id": "revit_architecture",
+                "speciality_display": "Revit Architecture",
+                "avatar": "/media/avatars/employees/avatar.jpg",
+                "avatar_url": "http://example.com/media/avatars/employees/avatar.jpg",
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            },
+            "tokens": {
+                "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Invalid credentials or no employee profile
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "email": ["Invalid email or password."]
+            }
+        }
+        OR
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "email": ["No employee profile found for this user."]
+            }
+        }
+
+Note: For security reasons, the same error message is returned for both
+      invalid email and invalid password to prevent user enumeration.
+
+
+3. EMPLOYEE PROFILE - GET
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/auth/profile/
+Authentication: Required (Bearer token)
+Description: Retrieve the authenticated employee's profile information
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Employee profile retrieved successfully.",
+        "data": {
+            "id": 1,
+            "email": "employee@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "full_name": "John Doe",
+            "role": "mentor",
+            "role_display": "Mentor",
+            "speciality_id": "revit_architecture",
+            "speciality_display": "Revit Architecture",
+            "avatar": "/media/avatars/employees/avatar.jpg",
+            "avatar_url": "http://example.com/media/avatars/employees/avatar.jpg",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 401 Unauthorized: Missing or invalid token
+        {
+            "detail": "Authentication credentials were not provided."
+        }
+    - 404 Not Found: Employee profile not found
+        {
+            "detail": "Employee profile not found."
+        }
+
+
+4. EMPLOYEE PROFILE - UPDATE
+--------------------------------------------------------------------------------
+Endpoint: PATCH /api/v1/auth/profile/
+Authentication: Required (Bearer token)
+Description: Update the authenticated employee's profile (partial update allowed)
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json (or multipart/form-data for avatar upload)
+
+Request Body (JSON - all fields optional):
+    {
+        "full_name": "John Updated Doe",
+        "speciality_id": "revit_structure",  // Only for mentors
+        "avatar": <file>  // Image file (use multipart/form-data)
+    }
+
+Allowed Fields for Update:
+    - full_name: String, max 255 characters
+    - speciality_id: String, one of: "revit_architecture", "revit_structure", 
+                     "tekla_structure" (only if role is "mentor")
+    - avatar: Image file
+
+Read-Only Fields (cannot be updated via this endpoint):
+    - id, email, first_name, last_name, role, created_at, updated_at
+
+Validation Rules:
+    - If role is "mentor", speciality_id can be updated but cannot be removed
+    - If role is not "mentor", speciality_id cannot be set
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Employee profile updated successfully.",
+        "data": {
+            "id": 1,
+            "email": "employee@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "full_name": "John Updated Doe",
+            "role": "mentor",
+            "role_display": "Mentor",
+            "speciality_id": "revit_structure",
+            "speciality_display": "Revit Structure",
+            "avatar": "/media/avatars/employees/new_avatar.jpg",
+            "avatar_url": "http://example.com/media/avatars/employees/new_avatar.jpg",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T13:30:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "speciality_id": ["Speciality is required for Mentors."]
+            }
+        }
+    - 401 Unauthorized: Missing or invalid token
+    - 404 Not Found: Employee profile not found
+
+
+5. TOKEN REFRESH
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/token/refresh/
+Authentication: Not required (but requires valid refresh token)
+Description: Get a new access token using a refresh token
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+    }
+
+Required Fields:
+    - refresh: Valid refresh token string
+
+Success Response (200 OK):
+    {
+        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+    }
+
+Error Responses:
+    - 401 Unauthorized: Invalid or expired refresh token
+        {
+            "detail": "Token is invalid or expired",
+            "code": "token_not_valid"
+        }
+
+Note: When a refresh token is used, it is automatically rotated (blacklisted)
+      and a new refresh token should be stored. However, this endpoint only
+      returns the new access token. Use the login endpoint if you need both
+      tokens.
+
+================================================================================
+ROLE VALUES
+================================================================================
+
+Employee Roles:
+    - "dasturchi"      -> "Dasturchi"
+    - "direktor"       -> "Direktor"
+    - "administrator"  -> "Administrator"
+    - "sotuv_agenti"   -> "Sotuv agenti"
+    - "mentor"         -> "Mentor"
+    - "assistent"      -> "Assistent"
+
+Speciality Values (for Mentors only):
+    - "revit_architecture" -> "Revit Architecture"
+    - "revit_structure"    -> "Revit Structure"
+    - "tekla_structure"    -> "Tekla Structure"
+
+================================================================================
+RESPONSE FORMAT
+================================================================================
+
+All API responses follow a standardized format:
+
+Success Response:
+    {
+        "success": true,
+        "message": "Operation successful message",
+        "data": { ... }  // Response data
+    }
+
+Error Response:
+    {
+        "success": false,
+        "message": "Error message",
+        "errors": { ... }  // Field-specific errors (if applicable)
+    }
+
+Note: Some endpoints may return Django REST Framework's default error format
+      for certain error types (e.g., 401 Unauthorized).
+
+================================================================================
+HTTP STATUS CODES
+================================================================================
+
+    - 200 OK: Request successful
+    - 201 Created: Resource created successfully
+    - 400 Bad Request: Validation errors or invalid input
+    - 401 Unauthorized: Authentication required or invalid token
+    - 404 Not Found: Resource not found
+    - 500 Internal Server Error: Server error
+
+================================================================================
+NOTES
+================================================================================
+
+1. Students do NOT have login/registration endpoints as this is not an online
+   learning platform. Students are managed through admin panel or by employees.
+
+2. All timestamps are in ISO 8601 format (UTC).
+
+3. Avatar URLs are absolute URLs when available in request context.
+
+4. Password validation follows Django's default validators:
+   - Minimum length validation
+   - Common password validation
+   - Numeric password validation
+   - User attribute similarity validation
+
+5. JWT tokens are stored in memory on the client side. Access tokens should
+   be refreshed before expiration to maintain session.
+
+6. All file uploads (avatars) should use multipart/form-data content type.
+
+7. The API uses API versioning (/api/v1/) for backward compatibility when
+   new versions are released.
+
+================================================================================
+LAST UPDATED
+================================================================================
+
+Date: 2026-01-10
+APIs Documented:
+    - Employee Registration (POST /api/v1/auth/register/)
+    - Employee Login (POST /api/v1/auth/login/)
+    - Employee Profile - Get (GET /api/v1/auth/profile/)
+    - Employee Profile - Update (PATCH /api/v1/auth/profile/)
+    - Token Refresh (POST /api/v1/auth/token/refresh/)
+
+================================================================================
