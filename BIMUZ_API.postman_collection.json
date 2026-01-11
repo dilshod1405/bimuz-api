@@ -838,6 +838,129 @@
 				}
 			],
 			"description": "Attendance management endpoints. Requires Administrator or Mentor role."
+		},
+		{
+			"name": "Student Booking",
+			"description": "Student booking endpoints for online group booking. No authentication required.",
+			"item": [
+				{
+					"name": "List Groups for Booking",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/booking/groups/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"booking",
+								"groups",
+								""
+							]
+						},
+						"description": "List all groups with booking information including availability.\n\n**Authentication:** Not required\n\n**Response Fields:**\n- can_accept_bookings: Boolean indicating if group can accept new bookings\n- days_since_start: Number of days since group started (null if not started)\n- available_seats: Number of available seats in the group\n\n**10-Day Rule:**\n- If group hasn't started (planned): booking allowed\n- If group has started: booking allowed only if < 10 days have passed\n- If group started >= 10 days ago: booking not allowed"
+					},
+					"response": []
+				},
+				{
+					"name": "Book Student into Group",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.booking) {",
+									"        pm.environment.set('student_id', response.data.booking.student_id);",
+									"        pm.environment.set('group_id', response.data.booking.group.id);",
+									"        console.log('✓ Booking saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student_id\": 1,\n    \"group_id\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/booking/book/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"booking",
+								"book",
+								""
+							]
+						},
+						"description": "Book a student into a group with validation.\n\n**Authentication:** Not required\n\n**Request Body:**\n- student_id: ID of the student to book (integer, required)\n- group_id: ID of the group to book into (integer, required)\n\n**Validation Rules:**\n- Student must exist and not already be booked in another group\n- Group must have available seats\n- Group must be able to accept bookings (10-day rule)\n\n**10-Day Rule:**\n- If group hasn't started (planned): booking allowed\n- If group has started: booking allowed only if < 10 days have passed\n- If group started >= 10 days ago: booking not allowed (alternatives suggested)\n\n**Error Responses:**\n- 400: No available seats (alternatives suggested)\n- 400: 10-day limit exceeded (alternatives suggested)\n- 400: Student already booked\n- 404: Student or Group not found"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Student Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student_id\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/booking/cancel/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"booking",
+								"cancel",
+								""
+							]
+						},
+						"description": "Cancel a student's booking by removing them from their group.\n\n**Authentication:** Not required\n\n**Request Body:**\n- student_id: ID of the student whose booking to cancel (integer, required)\n\n**Response:**\n- Returns cancelled booking information\n\n**Error Responses:**\n- 400: Student has no active booking\n- 404: Student not found"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -860,6 +983,18 @@
 			"key": "employee_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "student_id",
+			"value": "",
+			"type": "string",
+			"description": "Automatically set after booking a student"
+		},
+		{
+			"key": "group_id",
+			"value": "",
+			"type": "string",
+			"description": "Automatically set after booking a student"
 		}
 	]
 }

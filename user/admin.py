@@ -65,13 +65,13 @@ class EmployeeAdmin(admin.ModelAdmin):
                 obj.avatar.url
             )
         return mark_safe('<span style="color: #999;">No avatar</span>')
-    avatar_preview.short_description = 'Avatar Preview'  # type: ignore
+    avatar_preview.short_description = 'Avatar Preview'
     
     def get_role_display(self, obj):
         if not obj:
             return ''
         return dict(Role.choices).get(obj.role, obj.role)
-    get_role_display.short_description = 'Role'  # type: ignore
+    get_role_display.short_description = 'Role'
 
 
 @admin.register(Student)
@@ -102,7 +102,7 @@ class StudentAdmin(admin.ModelAdmin):
         if not obj:
             return ''
         return dict(Source.choices).get(obj.source, obj.source)
-    get_source_display.short_description = 'Source'  # type: ignore
+    get_source_display.short_description = 'Source'
     
     def group_link(self, obj):
         if not obj:
@@ -114,7 +114,7 @@ class StudentAdmin(admin.ModelAdmin):
                 str(obj.group)
             )
         return mark_safe('<span style="color: #999;">No group</span>')
-    group_link.short_description = 'Group'  # type: ignore
+    group_link.short_description = 'Group'
     
     def certificate_link(self, obj):
         if not obj:

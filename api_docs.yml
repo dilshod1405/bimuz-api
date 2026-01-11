@@ -457,6 +457,108 @@ response_format:
     Some endpoints may return Django REST Framework's default error format
     for certain error types (e.g., 401 Unauthorized).
 
+  student_booking:
+    list_groups:
+      method: "GET"
+      path: "/api/v1/education/booking/groups/"
+      authentication_required: false
+      description: "List all groups with booking information including availability"
+      
+      success_response:
+        status_code: 200
+        data:
+          - id: 1
+            speciality_id: "revit_architecture"
+            speciality_display: "Revit Architecture"
+            dates: "mon_wed_fri"
+            dates_display: "Monday - Wednesday - Friday"
+            time: "14:00:00"
+            starting_date: "2026-01-15"
+            seats: 15
+            current_students_count: 5
+            available_seats: 10
+            is_planned: true
+            is_active: false
+            can_accept_bookings: true
+            days_since_start: null
+            mentor: 1
+            mentor_name: "John Doe"
+    
+    book_student:
+      method: "POST"
+      path: "/api/v1/education/booking/book/"
+      authentication_required: false
+      description: "Book a student into a group with validation (10-day rule)"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - student_id
+          - group_id
+        schema:
+          student_id: "integer (Student ID)"
+          group_id: "integer (Group ID)"
+      
+      validation_rules:
+        - "Student must exist and not already be booked"
+        - "Group must have available seats"
+        - "10-day rule: If group started, booking allowed only if < 10 days have passed"
+      
+      success_response:
+        status_code: 201
+        message: "Student booked successfully into the group."
+        data:
+          booking:
+            student_id: 1
+            student_name: "John Student"
+            group: {}
+      
+      error_responses:
+        no_seats:
+          status_code: 400
+          message: "No available seats in this group."
+          data:
+            alternatives: []
+        ten_day_limit:
+          status_code: 400
+          message: "Cannot book this group. It started X days ago (10-day limit exceeded)."
+          data:
+            alternatives: []
+        already_booked:
+          status_code: 400
+          message: "Student is already booked in another group."
+    
+    cancel_booking:
+      method: "POST"
+      path: "/api/v1/education/booking/cancel/"
+      authentication_required: false
+      description: "Cancel a student's booking by removing them from their group"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - student_id
+        schema:
+          student_id: "integer (Student ID)"
+      
+      success_response:
+        status_code: 200
+        message: "Booking cancelled successfully."
+        data:
+          cancelled_booking:
+            student_id: 1
+            student_name: "John Student"
+            group_id: 2
+            group_name: "Revit Architecture - Monday - Wednesday - Friday"
+      
+      error_responses:
+        no_booking:
+          status_code: 400
+          message: "Student has no active booking."
+        not_found:
+          status_code: 404
+          message: "Student not found."
+
 http_status_codes:
   200: "OK - Request successful"
   201: "Created - Resource created successfully"
@@ -473,13 +575,30 @@ notes:
   - "JWT tokens are stored in memory on the client side. Access tokens should be refreshed before expiration to maintain session."
   - "All file uploads (avatars) should use multipart/form-data content type."
   - "The API uses API versioning (/api/v1/) for backward compatibility when new versions are released."
+  - "Booking system implements 10-day rule: Groups that started >= 10 days ago cannot accept new bookings."
 
 metadata:
-  last_updated: "2026-01-10"
+  last_updated: "2026-01-11"
   apis_documented:
     - "Employee Registration (POST /api/v1/auth/register/)"
     - "Employee Login (POST /api/v1/auth/login/)"
     - "Employee Profile - Get (GET /api/v1/auth/profile/)"
     - "Employee Profile - Update (PATCH /api/v1/auth/profile/)"
     - "Token Refresh (POST /api/v1/auth/token/refresh/)"
+    - "Employee Management - List (GET /api/v1/auth/employees/)"
+    - "Employee Management - Get (GET /api/v1/auth/employees/<id>/)"
+    - "Employee Management - Update (PATCH/PUT /api/v1/auth/employees/<id>/)"
+    - "Groups - List (GET /api/v1/education/groups/)"
+    - "Groups - Create (POST /api/v1/education/groups/)"
+    - "Groups - Get (GET /api/v1/education/groups/<id>/)"
+    - "Groups - Update (PATCH/PUT /api/v1/education/groups/<id>/)"
+    - "Groups - Delete (DELETE /api/v1/education/groups/<id>/)"
+    - "Attendances - List (GET /api/v1/education/attendances/)"
+    - "Attendances - Create (POST /api/v1/education/attendances/)"
+    - "Attendances - Get (GET /api/v1/education/attendances/<id>/)"
+    - "Attendances - Update (PATCH/PUT /api/v1/education/attendances/<id>/)"
+    - "Attendances - Delete (DELETE /api/v1/education/attendances/<id>/)"
+    - "Booking - List Groups (GET /api/v1/education/booking/groups/)"
+    - "Booking - Book Student (POST /api/v1/education/booking/book/)"
+    - "Booking - Cancel Booking (POST /api/v1/education/booking/cancel/)"
   documentation_version: "1.0"

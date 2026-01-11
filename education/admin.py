@@ -48,13 +48,13 @@ class GroupAdmin(admin.ModelAdmin):
         elif obj.is_active:
             return mark_safe('<span style="color: #2ecc71; font-weight: bold;">✅ Active</span>')
         return mark_safe('<span style="color: #95a5a6;">-</span>')
-    get_status_display.short_description = 'Status'  # type: ignore
+    get_status_display.short_description = 'Status'
     
     def current_students_count_display(self, obj):
         if not obj:
             return ''
         return str(obj.current_students_count)
-    current_students_count_display.short_description = 'Current Students'  # type: ignore
+    current_students_count_display.short_description = 'Current Students'
     
     def get_speciality_display(self, obj):
         if not obj:
@@ -71,13 +71,13 @@ class GroupAdmin(admin.ModelAdmin):
             color,
             speciality_name
         )
-    get_speciality_display.short_description = 'Speciality'  # type: ignore
+    get_speciality_display.short_description = 'Speciality'
     
     def get_dates_display(self, obj):
         if not obj:
             return ''
         return dict(Dates.choices).get(obj.dates, obj.dates)
-    get_dates_display.short_description = 'Schedule'  # type: ignore
+    get_dates_display.short_description = 'Schedule'
     
     def available_seats_display(self, obj):
         if not obj:
@@ -102,7 +102,7 @@ class GroupAdmin(admin.ModelAdmin):
             total,
             status
         )
-    available_seats_display.short_description = 'Available Seats'  # type: ignore
+    available_seats_display.short_description = 'Available Seats'
     
     def mentor_link(self, obj):
         if not obj:
@@ -114,7 +114,7 @@ class GroupAdmin(admin.ModelAdmin):
                 obj.mentor.full_name
             )
         return mark_safe('<span style="color: #999;">No mentor assigned</span>')
-    mentor_link.short_description = 'Mentor'  # type: ignore
+    mentor_link.short_description = 'Mentor'
     
     def students_list(self, obj):
         if not obj:
@@ -138,7 +138,7 @@ class GroupAdmin(admin.ModelAdmin):
             student_links.append(format_html('<em>... and {} more</em>', more_count))
         
         return mark_safe('<br>'.join(str(link) for link in student_links))
-    students_list.short_description = 'Students'  # type: ignore
+    students_list.short_description = 'Students'
     
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -149,7 +149,7 @@ class GroupAdmin(admin.ModelAdmin):
             self.message_user(
                 request,
                 'Warning: Selected employee must have Mentor role.',
-                level=messages.WARNING  # type: ignore
+                level=messages.WARNING
             )
         super().save_model(request, obj, form, change)
     
@@ -157,16 +157,16 @@ class GroupAdmin(admin.ModelAdmin):
     
     @admin.action(description='Assign default mentor to selected groups')
     def assign_default_mentor(self, request, queryset):
-        mentor = Employee._default_manager.filter(role='mentor').first()  # type: ignore
+        mentor = Employee._default_manager.filter(role='mentor').first()
         if not mentor:
-            self.message_user(request, 'No mentors available.', level=messages.ERROR)  # type: ignore
+            self.message_user(request, 'No mentors available.', level=messages.ERROR)
             return
         
         updated = queryset.update(mentor=mentor)
         self.message_user(
             request,
             f'Successfully assigned {mentor.full_name} to {updated} group(s).',
-            level=messages.SUCCESS  # type: ignore
+            level=messages.SUCCESS
         )
 
 
@@ -198,11 +198,11 @@ class AttendanceAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change=change, **kwargs)
         
-        base_fields = getattr(form, 'base_fields', {})  # type: ignore
+        base_fields = getattr(form, 'base_fields', {})
         if obj and obj.group and 'participants' in base_fields:
-            base_fields['participants'].queryset = obj.group.students.all()  # type: ignore
+            base_fields['participants'].queryset = obj.group.students.all()
         elif 'participants' in base_fields:
-            base_fields['participants'].queryset = base_fields['participants'].queryset.none()  # type: ignore
+            base_fields['participants'].queryset = base_fields['participants'].queryset.none()
         
         return form
     
@@ -216,7 +216,7 @@ class AttendanceAdmin(admin.ModelAdmin):
                 str(obj.group)
             )
         return mark_safe('<span style="color: #999;">No group</span>')
-    group_link.short_description = 'Group'  # type: ignore
+    group_link.short_description = 'Group'
     
     def mentor_link(self, obj):
         if not obj:
@@ -228,7 +228,7 @@ class AttendanceAdmin(admin.ModelAdmin):
                 obj.mentor.full_name
             )
         return mark_safe('<span style="color: #999;">No mentor assigned</span>')
-    mentor_link.short_description = 'Mentor'  # type: ignore
+    mentor_link.short_description = 'Mentor'
     
     def participants_count(self, obj):
         if not obj:
@@ -249,7 +249,7 @@ class AttendanceAdmin(admin.ModelAdmin):
             count,
             total
         )
-    participants_count.short_description = 'Participants'  # type: ignore
+    participants_count.short_description = 'Participants'
     
     def participants_list(self, obj):
         if not obj or not obj.pk:
@@ -270,7 +270,7 @@ class AttendanceAdmin(admin.ModelAdmin):
             )
         
         return mark_safe('<br>'.join(str(link) for link in participant_links))
-    participants_list.short_description = 'Participants List'  # type: ignore
+    participants_list.short_description = 'Participants List'
     
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -281,7 +281,7 @@ class AttendanceAdmin(admin.ModelAdmin):
             self.message_user(
                 request,
                 'Warning: Selected employee must have Mentor role.',
-                level=messages.WARNING  # type: ignore
+                level=messages.WARNING
             )
         
         super().save_model(request, obj, form, change)
@@ -291,8 +291,8 @@ class AttendanceAdmin(admin.ModelAdmin):
         
         obj = form.instance
         if obj.pk and obj.group and hasattr(obj, 'participants'):
-            group_students = obj.group.students.all()  # type: ignore
-            participants = obj.participants.all()  # type: ignore
+            group_students = obj.group.students.all()
+            participants = obj.participants.all()
             invalid_participants = participants.exclude(id__in=group_students.values_list('id', flat=True))
             
             if invalid_participants.exists():
@@ -300,6 +300,6 @@ class AttendanceAdmin(admin.ModelAdmin):
                 self.message_user(
                     request,
                     f'Warning: The following participants are not members of this group and were removed: {invalid_names}',
-                    level=messages.WARNING  # type: ignore
+                    level=messages.WARNING
                 )
                 obj.participants.remove(*invalid_participants)

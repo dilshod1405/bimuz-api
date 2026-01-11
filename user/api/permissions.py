@@ -3,7 +3,7 @@ from rest_framework.exceptions import PermissionDenied
 
 
 class IsDeveloper(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view):  # type: ignore
         if not request.user or not request.user.is_authenticated:
             return False
         
@@ -14,7 +14,7 @@ class IsDeveloper(permissions.BasePermission):
 
 
 class IsDeveloperOrAdministrator(permissions.BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view):  # type: ignore
         if not request.user or not request.user.is_authenticated:
             return False
         
@@ -24,7 +24,7 @@ class IsDeveloperOrAdministrator(permissions.BasePermission):
         role = request.user.employee_profile.role
         return role in ['dasturchi', 'administrator']
     
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj):  # type: ignore
         if not hasattr(request.user, 'employee_profile'):
             return False
         

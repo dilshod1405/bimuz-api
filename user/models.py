@@ -40,24 +40,24 @@ class BaseModel(models.Model):
 
 
 class Speciality(models.TextChoices):
-    REVIT_ARCHITECTURE = ('revit_architecture', 'Revit Architecture')  # type: ignore
-    REVIT_STRUCTURE = ('revit_structure', 'Revit Structure')  # type: ignore
-    TEKLA_STRUCTURE = ('tekla_structure', 'Tekla Structure')  # type: ignore
+    REVIT_ARCHITECTURE = ('revit_architecture', 'Revit Architecture')
+    REVIT_STRUCTURE = ('revit_structure', 'Revit Structure')
+    TEKLA_STRUCTURE = ('tekla_structure', 'Tekla Structure')
 
 
 class Role(models.TextChoices):
-    DEVELOPER = ('dasturchi', 'Dasturchi')  # type: ignore
-    DIRECTOR = ('direktor', 'Direktor')  # type: ignore
-    ADMINISTRATOR = ('administrator', 'Administrator')  # type: ignore
-    SALES_AGENT = ('sotuv_agenti', 'Sotuv agenti')  # type: ignore
-    MENTOR = ('mentor', 'Mentor')  # type: ignore
-    ASSISTANT = ('assistent', 'Assistent')  # type: ignore
+    DEVELOPER = ('dasturchi', 'Dasturchi')
+    DIRECTOR = ('direktor', 'Direktor')
+    ADMINISTRATOR = ('administrator', 'Administrator')
+    SALES_AGENT = ('sotuv_agenti', 'Sotuv agenti')
+    MENTOR = ('mentor', 'Mentor')
+    ASSISTANT = ('assistent', 'Assistent')
 
 
 class Source(models.TextChoices):
-    INSTAGRAM = ('instagram', 'Instagram')  # type: ignore
-    FACEBOOK = ('facebook', 'Facebook')  # type: ignore
-    TELEGRAM = ('telegram', 'Telegram')  # type: ignore
+    INSTAGRAM = ('instagram', 'Instagram')
+    FACEBOOK = ('facebook', 'Facebook')
+    TELEGRAM = ('telegram', 'Telegram')
 
 
 class User(AbstractUser):
@@ -108,7 +108,7 @@ class Employee(BaseModel):
         verbose_name='Role'
     )
 
-    class Meta:  # type: ignore
+    class Meta:
         db_table = 'employees'
         verbose_name = 'Employee'
         verbose_name_plural = 'Employees'
@@ -147,7 +147,7 @@ class Student(BaseModel):
         choices=Source.choices,
         verbose_name='Source'
     )
-    group = models.ForeignKey(  # type: ignore
+    group = models.ForeignKey(
         'education.Group',
         on_delete=models.SET_NULL,
         null=True,
@@ -162,7 +162,7 @@ class Student(BaseModel):
         verbose_name='Certificate'
     )
 
-    class Meta:  # type: ignore
+    class Meta:
         db_table = 'students'
         verbose_name = 'Student'
         verbose_name_plural = 'Students'

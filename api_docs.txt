@@ -1016,6 +1016,206 @@ Error Responses:
     - 404 Not Found: Attendance not found
 
 ================================================================================
+STUDENT BOOKING APIs (Public - No Authentication Required)
+================================================================================
+
+These APIs allow students to book spaces in groups online. The booking system
+implements a 10-day rule: if a group has already started, students can only
+book if less than 10 days have passed since the starting date.
+
+1. LIST GROUPS FOR BOOKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/education/booking/groups/
+Authentication: Not required
+Description: List all groups with booking information including availability
+
+Request Headers:
+    Content-Type: application/json
+
+Success Response (200 OK):
+    [
+        {
+            "id": 1,
+            "speciality_id": "revit_architecture",
+            "speciality_display": "Revit Architecture",
+            "dates": "mon_wed_fri",
+            "dates_display": "Monday - Wednesday - Friday",
+            "time": "14:00:00",
+            "starting_date": "2026-01-15",
+            "seats": 15,
+            "current_students_count": 5,
+            "available_seats": 10,
+            "is_planned": true,
+            "is_active": false,
+            "can_accept_bookings": true,
+            "days_since_start": null,
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    ]
+
+Response Fields:
+    - can_accept_bookings: Boolean indicating if group can accept new bookings
+    - days_since_start: Number of days since group started (null if not started)
+    - available_seats: Number of available seats in the group
+
+--------------------------------------------------------------------------------
+2. BOOK STUDENT INTO GROUP
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/education/booking/book/
+Authentication: Not required
+Description: Book a student into a group with validation
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "student_id": 1,
+        "group_id": 2
+    }
+
+Required Fields:
+    - student_id: ID of the student to book
+    - group_id: ID of the group to book into
+
+Validation Rules:
+    - Student must exist and not already be booked in another group
+    - Group must have available seats
+    - Group must be able to accept bookings (10-day rule):
+      * If group hasn't started (planned): booking allowed
+      * If group has started: booking allowed only if < 10 days have passed
+      * If group started >= 10 days ago: booking not allowed
+
+Success Response (201 Created):
+    {
+        "success": true,
+        "message": "Student booked successfully into the group.",
+        "data": {
+            "booking": {
+                "student_id": 1,
+                "student_name": "John Student",
+                "group": {
+                    "id": 2,
+                    "speciality_id": "revit_architecture",
+                    "speciality_display": "Revit Architecture",
+                    "dates": "mon_wed_fri",
+                    "dates_display": "Monday - Wednesday - Friday",
+                    "time": "14:00:00",
+                    "starting_date": "2026-01-20",
+                    "seats": 15,
+                    "current_students_count": 6,
+                    "available_seats": 9,
+                    "is_planned": true,
+                    "is_active": false,
+                    "can_accept_bookings": true,
+                    "days_since_start": null,
+                    "mentor": 1,
+                    "mentor_name": "John Doe",
+                    "created_at": "2026-01-10T12:00:00Z",
+                    "updated_at": "2026-01-11T10:00:00Z"
+                }
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+        {
+            "success": false,
+            "message": "Cannot book this group. It started 12 days ago (10-day limit exceeded).",
+            "errors": {
+                "group_id": ["10-day booking limit exceeded."]
+            },
+            "data": {
+                "alternatives": [
+                    {
+                        "id": 3,
+                        "speciality_id": "revit_architecture",
+                        "speciality_display": "Revit Architecture",
+                        "dates": "tue_thu_sat",
+                        "dates_display": "Tuesday - Thursday - Saturday",
+                        "time": "10:00:00",
+                        "starting_date": "2026-02-01",
+                        "seats": 12,
+                        "available_seats": 8,
+                        "is_planned": true,
+                        "mentor": 2,
+                        "mentor_name": "Jane Smith"
+                    }
+                ]
+            }
+        }
+    - 400 Bad Request: No available seats
+        {
+            "success": false,
+            "message": "No available seats in this group.",
+            "errors": {
+                "group_id": ["Group is full."]
+            },
+            "data": {
+                "alternatives": [...]
+            }
+        }
+    - 400 Bad Request: Student already booked
+        {
+            "success": false,
+            "message": "Student is already booked in another group.",
+            "errors": {
+                "student_id": ["Student already has a booking."]
+            }
+        }
+    - 404 Not Found: Student or Group not found
+
+Note: When booking fails due to 10-day limit or full group, alternative groups
+      with the same speciality are suggested in the response.
+
+--------------------------------------------------------------------------------
+3. CANCEL STUDENT BOOKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/education/booking/cancel/
+Authentication: Not required
+Description: Cancel a student's booking by removing them from their group
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "student_id": 1
+    }
+
+Required Fields:
+    - student_id: ID of the student whose booking to cancel
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Booking cancelled successfully.",
+        "data": {
+            "cancelled_booking": {
+                "student_id": 1,
+                "student_name": "John Student",
+                "group_id": 2,
+                "group_name": "Revit Architecture - Monday - Wednesday - Friday"
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Student has no booking
+        {
+            "success": false,
+            "message": "Student has no active booking.",
+            "errors": {
+                "student_id": ["Student is not booked in any group."]
+            }
+        }
+    - 404 Not Found: Student not found
+
+================================================================================
 HTTP STATUS CODES
 ================================================================================
 
@@ -1075,5 +1275,8 @@ APIs Documented:
     - Attendances - Get (GET /api/v1/education/attendances/<id>/)
     - Attendances - Update (PATCH/PUT /api/v1/education/attendances/<id>/)
     - Attendances - Delete (DELETE /api/v1/education/attendances/<id>/)
+    - Booking - List Groups (GET /api/v1/education/booking/groups/)
+    - Booking - Book Student (POST /api/v1/education/booking/book/)
+    - Booking - Cancel Booking (POST /api/v1/education/booking/cancel/)
 
 ================================================================================

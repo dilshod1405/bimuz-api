@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
 from user.models import BaseModel, Speciality
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class Group(BaseModel):
         blank=True
     )
     is_active = models.BooleanField(
-        default=True,
+        default=True,  # type: ignore
         verbose_name='Is Active',
         help_text='Automatically set to True when starting_date is reached'
     )
@@ -99,6 +99,35 @@ class Group(BaseModel):
             return False
         from django.utils import timezone
         return self.starting_date > timezone.now().date()
+    
+    def can_accept_bookings(self) -> bool:
+        """
+        Check if group can accept new bookings based on 10-day rule.
+        - If group hasn't started (planned): can accept bookings
+        - If group has started: can accept only if less than 10 days have passed
+        - If no starting_date: can accept bookings
+        """
+        if not self.starting_date:
+            return True
+        
+        today = timezone.now().date()
+        
+        if self.starting_date > today:
+            return True
+        
+        days_since_start = (today - self.starting_date).days  # type: ignore
+        return days_since_start < 10
+    
+    def days_since_start(self) -> int | None:
+        """Return number of days since group started, or None if not started yet."""
+        if not self.starting_date:
+            return None
+        
+        today = timezone.now().date()
+        if self.starting_date > today:
+            return None
+        
+        return (today - self.starting_date).days  # type: ignore
 
 
 class Attendance(BaseModel):

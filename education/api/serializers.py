@@ -52,7 +52,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     participants_list = AttendanceParticipantSerializer(source='participants', many=True, read_only=True)
     participants = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Student._default_manager.all(),  # type: ignore
+        queryset=Student._default_manager.all(),
         required=False,
         allow_empty=True
     )
@@ -69,7 +69,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     
     def get_participants_count(self, obj):
         if obj.pk and hasattr(obj, 'participants'):
-            return obj.participants.count()  # type: ignore
+            return obj.participants.count()
         return 0
     
     def validate_mentor(self, value):
@@ -82,7 +82,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         participants = attrs.get('participants', [])
         
         if group and participants:
-            group_students = group.students.all()  # type: ignore
+            group_students = group.students.all()
             group_student_ids = set(group_students.values_list('id', flat=True))
             participant_ids = {p.id if hasattr(p, 'id') else p for p in participants}
             
@@ -96,10 +96,10 @@ class AttendanceSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         participants = validated_data.pop('participants', [])
-        attendance = Attendance._default_manager.create(**validated_data)  # type: ignore
+        attendance = Attendance._default_manager.create(**validated_data)
         
         if participants:
-            attendance.participants.set(participants)  # type: ignore
+            attendance.participants.set(participants)
         
         return attendance
     
@@ -112,6 +112,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
         instance.save()
         
         if participants is not None:
-            instance.participants.set(participants)  # type: ignore
+            instance.participants.set(participants)
         
         return instance

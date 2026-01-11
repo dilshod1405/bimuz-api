@@ -55,7 +55,7 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
             last_name=last_name
         )
         
-        employee = Employee._default_manager.create(  # type: ignore
+        employee = Employee._default_manager.create(
             user=user,
             **validated_data
         )
