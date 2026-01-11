@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+from bimuz.health import health_check
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -21,6 +22,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('health/', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     path('i18n/setlang/', set_language, name='set_language'),
     

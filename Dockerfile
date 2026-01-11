@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     build-essential \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --shell /bin/bash app
@@ -23,10 +24,13 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 
 COPY --chown=app:app . /app/
 
-RUN mkdir -p /app/staticfiles /app/media && chown -R app:app /app
+COPY --chown=app:app entrypoint.sh /app/entrypoint.sh
+
+RUN mkdir -p /app/staticfiles /app/media && chown -R app:app /app && \
+    chmod +x /app/entrypoint.sh
 
 USER app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 bimuz.wsgi:application"]
+ENTRYPOINT ["/app/entrypoint.sh"]

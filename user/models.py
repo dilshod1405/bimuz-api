@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from education.models import Group
 
 
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager):  # type: ignore
     
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -70,12 +70,12 @@ class User(AbstractUser):
         },
     )
     
-    objects = UserManager()
+    objects = UserManager()  # type: ignore
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     
-    class Meta(AbstractUser.Meta):
+    class Meta(AbstractUser.Meta):  # type: ignore
         db_table = 'users'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
@@ -108,7 +108,7 @@ class Employee(BaseModel):
         verbose_name='Role'
     )
 
-    class Meta:
+    class Meta:  # type: ignore
         db_table = 'employees'
         verbose_name = 'Employee'
         verbose_name_plural = 'Employees'
@@ -162,7 +162,7 @@ class Student(BaseModel):
         verbose_name='Certificate'
     )
 
-    class Meta:
+    class Meta:  # type: ignore
         db_table = 'students'
         verbose_name = 'Student'
         verbose_name_plural = 'Students'
