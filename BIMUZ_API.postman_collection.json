@@ -1,0 +1,865 @@
+{
+	"info": {
+		"_postman_id": "bimuz-api-collection-2026",
+		"name": "BIMUZ API",
+		"description": "Complete API collection for BIMUZ project. Includes employee authentication, profile management, groups, and attendances.\n\n**Base URL**: `{{base_url}}/api/v1/`\n\n**Authentication**: JWT Bearer Token\n- Access tokens expire after 1 hour\n- Refresh tokens expire after 7 days\n- Include token in header: `Authorization: Bearer {{access_token}}`\n\n**Roles**:\n- dasturchi (Developer)\n- direktor (Director)\n- administrator (Administrator) - can manage Groups and Attendances\n- sotuv_agenti (Sales Agent)\n- mentor (Mentor) - can manage Attendances\n- assistent (Assistant)\n\n**Permissions**:\n- Groups: Administrator only\n- Attendances: Administrator or Mentor",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "bimuz-api"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Employee Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set('access_token', response.data.tokens.access);",
+									"        pm.environment.set('refresh_token', response.data.tokens.refresh);",
+									"        pm.environment.set('employee_id', response.data.employee.id);",
+									"        console.log('\u2713 Tokens saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"employee@example.com\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"password\": \"SecurePassword123!\",\n    \"password_confirm\": \"SecurePassword123!\",\n    \"full_name\": \"John Doe\",\n    \"role\": \"mentor\",\n    \"professionality\": \"Revit Architecture Expert\",\n    \"avatar\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								""
+							]
+						},
+						"description": "Register a new employee account with user and employee profile.\n\n**Required Fields:**\n- email: Valid email address (unique)\n- first_name: String, max 150 characters\n- last_name: String, max 150 characters\n- password: String (min 8 chars, strong validation)\n- password_confirm: String (must match password)\n- full_name: String, max 255 characters\n- role: Choice from available roles\n\n**Optional Fields:**\n- professionality: String, max 255 characters (professional expertise or specialization)\n\n**Optional Fields:**\n- avatar: Image file (can be null)\n\n**Response:**\n- Returns employee profile and JWT tokens (access + refresh)\n- Tokens are automatically saved to environment variables"
+					},
+					"response": []
+				},
+				{
+					"name": "Employee Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set('access_token', response.data.tokens.access);",
+									"        pm.environment.set('refresh_token', response.data.tokens.refresh);",
+									"        pm.environment.set('employee_id', response.data.employee.id);",
+									"        console.log('\u2713 Tokens saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"employee@example.com\",\n    \"password\": \"SecurePassword123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								""
+							]
+						},
+						"description": "Authenticate an employee and receive JWT tokens.\n\n**Required Fields:**\n- email: Employee's email address\n- password: Employee's password\n\n**Response:**\n- Returns employee profile and JWT tokens (access + refresh)\n- Tokens are automatically saved to environment variables"
+					},
+					"response": []
+				},
+				{
+					"name": "Token Refresh",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.access) {",
+									"        pm.environment.set('access_token', response.access);",
+									"        if (response.refresh) {",
+									"            pm.environment.set('refresh_token', response.refresh);",
+									"        }",
+									"        console.log('\u2713 New tokens saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"token",
+								"refresh",
+								""
+							]
+						},
+						"description": "Obtain a new access token using a valid refresh token.\n\n**Required Fields:**\n- refresh: Valid refresh token\n\n**Response:**\n- Returns new access token (and new refresh token if rotation is enabled)\n- New tokens are automatically saved to environment variables"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for employee registration, login, and token management."
+		},
+		{
+			"name": "Employee Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile",
+								""
+							]
+						},
+						"description": "Retrieve the authenticated employee's profile information.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Response:**\n- Returns complete employee profile including:\n  - Basic info (id, email, first_name, last_name, full_name)\n  - Role and professionality information\n  - Avatar URL\n  - Timestamps (created_at, updated_at)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"John Updated Doe\",\n    \"professionality\": \"Revit Structure Specialist\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile",
+								""
+							]
+						},
+						"description": "Update parts of the authenticated employee's profile (JSON format).\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Updatable Fields:**\n- full_name: String, max 255 characters\n- professionality: String, max 255 characters (professional expertise or specialization, optional)\n\n**Validation:**\n**Note:** For avatar upload, use the 'Update Profile (with Avatar)' request instead."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile (with Avatar)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Updated Doe",
+									"type": "text"
+								},
+								{
+									"key": "professionality",
+									"value": "revit_structure",
+									"type": "text",
+									"description": "Only for mentors"
+								},
+								{
+									"key": "avatar",
+									"type": "file",
+									"src": [],
+									"description": "Image file (jpg, png, etc.)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile",
+								""
+							]
+						},
+						"description": "Update employee profile including avatar image upload.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Format:** multipart/form-data\n\n**Fields:**\n- full_name: String, max 255 characters (optional)\n- professionality: String, max 255 characters (professional expertise or specialization, optional)\n- avatar: Image file (optional)\n\n**Validation:**\n**Usage:**\n1. Click on 'avatar' field\n2. Select 'File' type\n3. Click 'Select Files' to choose an image\n4. Send request"
+					},
+					"response": []
+				}
+			],
+			"description": "Employee profile management endpoints. Requires authentication."
+		},
+		{
+			"name": "Employee Management",
+			"item": [
+				{
+					"name": "List Employees",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/employees/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"employees",
+								""
+							]
+						},
+						"description": "List all employees (Developer or Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Developer or Administrator role\n\n**Query Parameters (optional):**\n- page: Page number for pagination (default: 1)\n- page_size: Number of results per page (default: 20)\n\n**Response:**\n- Returns list of employees with role, status, and profile information"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Employee",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/employees/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"employees",
+								"1",
+								""
+							]
+						},
+						"description": "Retrieve a specific employee by ID (Developer or Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Developer or Administrator role\n\n**Path Parameters:**\n- id: Employee ID (integer)\n\n**Response:**\n- Returns complete employee data including role, status, and profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Employee",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"mentor\",\n    \"is_active\": true,\n    \"full_name\": \"Updated Name\",\n    \"professionality\": \"Revit Architecture Expert\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/employees/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"employees",
+								"1",
+								""
+							]
+						},
+						"description": "Update a specific employee (Developer or Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Developer or Administrator role\n\n**Important:**\n- Administrator CANNOT update Director or Developer roles\n- Developer has FULL access (can update all roles)\n- Administrator can only update lower roles\n\n**Path Parameters:**\n- id: Employee ID (integer)\n\n**Updatable Fields:**\n- role: Choice from available roles (restricted for Administrator)\n- is_active: Boolean (user account status)\n- full_name: String, max 255 characters\n- professionality: String, max 255 characters (professional expertise or specialization, optional)\n- avatar: Image file (use multipart/form-data for file upload)\n\n**Validation:**\n- Administrator cannot assign Director or Developer roles\n- Administrator cannot update employees with Director or Developer roles\n- "
+					},
+					"response": []
+				}
+			],
+			"description": "Employee management endpoints for Developers and Administrators. Requires authentication and appropriate role permissions."
+		},
+		{
+			"name": "Groups",
+			"item": [
+				{
+					"name": "List Groups",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/groups/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"groups",
+								""
+							]
+						},
+						"description": "Retrieve a list of all groups (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Query Parameters (optional):**\n- page: Page number for pagination (default: 1)\n- page_size: Number of results per page (default: 20)\n\n**Response:**\n- Returns list of groups with computed fields (current_students_count, available_seats, is_planned, is_active)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"professionality\": \"Revit Architecture Expert\",\n    \"dates\": \"mon_wed_fri\",\n    \"time\": \"14:00:00\",\n    \"starting_date\": \"2026-02-01\",\n    \"seats\": 20,\n    \"mentor\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/groups/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"groups",
+								""
+							]
+						},
+						"description": "Create a new group (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Required Fields:**\n- professionality: String (professional expertise or specialization)\n- dates: Choice ('mon_wed_fri' or 'tue_thu_sat')\n- time: Time in HH:MM:SS format (e.g., \"14:00:00\")\n- seats: Positive integer (maximum number of students)\n\n**Optional Fields:**\n- starting_date: Date in YYYY-MM-DD format (for planned groups)\n- mentor: ID of employee with Mentor role\n\n**Validation:**\n- Mentor must have 'mentor' role\n- Professionality_id must be a valid choice\n- Dates must be a valid choice\n- Seats must be a positive integer"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/groups/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"groups",
+								"1",
+								""
+							]
+						},
+						"description": "Retrieve a specific group by ID (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Response:**\n- Returns complete group data with computed fields"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"seats\": 25,\n    \"mentor\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/groups/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"groups",
+								"1",
+								""
+							]
+						},
+						"description": "Update a specific group (partial update) (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Updatable Fields:**\n- professionality: String (professional expertise or specialization)\n- dates: Choice from available dates\n- time: Time in HH:MM:SS format\n- starting_date: Date in YYYY-MM-DD format\n- seats: Positive integer\n- mentor: ID of employee with Mentor role"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Group",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/groups/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"groups",
+								"1",
+								""
+							]
+						},
+						"description": "Delete a specific group by ID (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Response:**\n- Returns 204 No Content on success"
+					},
+					"response": []
+				}
+			],
+			"description": "Group management endpoints. Requires Administrator role."
+		},
+		{
+			"name": "Attendances",
+			"item": [
+				{
+					"name": "List Attendances",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/attendances/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"attendances",
+								""
+							]
+						},
+						"description": "Retrieve a list of all attendances (Administrator or Mentor only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator or Mentor role\n\n**Query Parameters (optional):**\n- page: Page number for pagination (default: 1)\n- page_size: Number of results per page (default: 20)\n\n**Response:**\n- Returns list of attendances with participant details"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Attendance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"group\": 1,\n    \"date\": \"2026-01-10\",\n    \"mentor\": 1,\n    \"participants\": [1, 2, 3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/attendances/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"attendances",
+								""
+							]
+						},
+						"description": "Create a new attendance record (Administrator or Mentor only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator or Mentor role\n\n**Required Fields:**\n- group: ID of the group\n- date: Date in YYYY-MM-DD format\n\n**Optional Fields:**\n- mentor: ID of employee with Mentor role\n- participants: Array of student IDs (must be members of the group)\n\n**Validation:**\n- Mentor must have 'mentor' role\n- All participants must be members of the selected group\n- Unique constraint: one attendance per group per date"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/attendances/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"attendances",
+								"1",
+								""
+							]
+						},
+						"description": "Retrieve a specific attendance by ID (Administrator or Mentor only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator or Mentor role\n\n**Path Parameters:**\n- id: Attendance ID (integer)\n\n**Response:**\n- Returns complete attendance data with participant details"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Attendance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"participants\": [1, 2, 3, 4]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/attendances/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"attendances",
+								"1",
+								""
+							]
+						},
+						"description": "Update a specific attendance (partial update) (Administrator or Mentor only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator or Mentor role\n\n**Path Parameters:**\n- id: Attendance ID (integer)\n\n**Updatable Fields:**\n- group: ID of the group\n- date: Date in YYYY-MM-DD format\n- mentor: ID of employee with Mentor role\n- participants: Array of student IDs (must be members of the group)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Attendance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/education/attendances/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"education",
+								"attendances",
+								"1",
+								""
+							]
+						},
+						"description": "Delete a specific attendance by ID (Administrator or Mentor only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator or Mentor role\n\n**Path Parameters:**\n- id: Attendance ID (integer)\n\n**Response:**\n- Returns 204 No Content on success"
+					},
+					"response": []
+				}
+			],
+			"description": "Attendance management endpoints. Requires Administrator or Mentor role."
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "employee_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

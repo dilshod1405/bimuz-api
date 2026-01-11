@@ -69,7 +69,7 @@ Request Body (JSON):
         "password_confirm": "SecurePassword123!",
         "full_name": "John Doe",
         "role": "mentor",
-        "speciality_id": "revit_architecture",
+        "professionality": "Revit Architecture Expert",
         "avatar": null  // Optional, can be uploaded as multipart/form-data
     }
 
@@ -83,11 +83,8 @@ Required Fields:
     - role: One of: "dasturchi", "direktor", "administrator", "sotuv_agenti", 
             "mentor", "assistent"
 
-Conditional Fields:
-    - speciality_id: Required only if role="mentor"
-                     Options: "revit_architecture", "revit_structure", 
-                             "tekla_structure"
-                     Must be null/empty for non-mentor roles
+Optional Fields:
+    - professionality: String, max 255 characters (professional expertise or specialization)
 
 Optional Fields:
     - avatar: Image file (upload via multipart/form-data)
@@ -105,8 +102,7 @@ Success Response (201 Created):
                 "full_name": "John Doe",
                 "role": "mentor",
                 "role_display": "Mentor",
-                "speciality_id": "revit_architecture",
-                "speciality_display": "Revit Architecture",
+                "professionality": "Revit Architecture Expert",
                 "avatar": null,
                 "avatar_url": null,
                 "created_at": "2026-01-10T12:00:00Z",
@@ -127,19 +123,14 @@ Error Responses:
             "errors": {
                 "email": ["Employee with this email already exists."],
                 "password_confirm": ["Passwords do not match."],
-                "speciality_id": ["Speciality is required for Mentors."]
+                "professionality is optional for all roles."]
             }
         }
 
 Validation Rules:
     - Email must be unique across all users
     - Password must meet Django's password validation requirements
-    - Password and password_confirm must match
-    - If role is "mentor", speciality_id is required
-    - If role is not "mentor", speciality_id must be null/empty
-
-
-2. EMPLOYEE LOGIN
+    - Password and password_confirm must match2. EMPLOYEE LOGIN
 --------------------------------------------------------------------------------
 Endpoint: POST /api/v1/auth/login/
 Authentication: Not required
@@ -171,8 +162,7 @@ Success Response (200 OK):
                 "full_name": "John Doe",
                 "role": "mentor",
                 "role_display": "Mentor",
-                "speciality_id": "revit_architecture",
-                "speciality_display": "Revit Architecture",
+                "professionality": "Revit Architecture Expert",
                 "avatar": "/media/avatars/employees/avatar.jpg",
                 "avatar_url": "http://example.com/media/avatars/employees/avatar.jpg",
                 "created_at": "2026-01-10T12:00:00Z",
@@ -229,8 +219,7 @@ Success Response (200 OK):
             "full_name": "John Doe",
             "role": "mentor",
             "role_display": "Mentor",
-            "speciality_id": "revit_architecture",
-            "speciality_display": "Revit Architecture",
+            "professionality": "Revit Architecture Expert",
             "avatar": "/media/avatars/employees/avatar.jpg",
             "avatar_url": "http://example.com/media/avatars/employees/avatar.jpg",
             "created_at": "2026-01-10T12:00:00Z",
@@ -262,13 +251,13 @@ Request Headers:
 Request Body (JSON - all fields optional):
     {
         "full_name": "John Updated Doe",
-        "speciality_id": "revit_structure",  // Only for mentors
+        "professionality": "Revit Structure Specialist",  // Only for mentors
         "avatar": <file>  // Image file (use multipart/form-data)
     }
 
 Allowed Fields for Update:
     - full_name: String, max 255 characters
-    - speciality_id: String, one of: "revit_architecture", "revit_structure", 
+    - professionality: String, max 255 characters (professional expertise or specialization)
                      "tekla_structure" (only if role is "mentor")
     - avatar: Image file
 
@@ -276,8 +265,8 @@ Read-Only Fields (cannot be updated via this endpoint):
     - id, email, first_name, last_name, role, created_at, updated_at
 
 Validation Rules:
-    - If role is "mentor", speciality_id can be updated but cannot be removed
-    - If role is not "mentor", speciality_id cannot be set
+    - If role is "mentor", 
+    - If role is not "mentor", 
 
 Success Response (200 OK):
     {
@@ -291,8 +280,7 @@ Success Response (200 OK):
             "full_name": "John Updated Doe",
             "role": "mentor",
             "role_display": "Mentor",
-            "speciality_id": "revit_structure",
-            "speciality_display": "Revit Structure",
+            "professionality": "Revit Structure Specialist",
             "avatar": "/media/avatars/employees/new_avatar.jpg",
             "avatar_url": "http://example.com/media/avatars/employees/new_avatar.jpg",
             "created_at": "2026-01-10T12:00:00Z",
@@ -306,7 +294,7 @@ Error Responses:
             "success": false,
             "message": "Validation error",
             "errors": {
-                "speciality_id": ["Speciality is required for Mentors."]
+                "professionality is optional for all roles."]
             }
         }
     - 401 Unauthorized: Missing or invalid token
@@ -359,7 +347,7 @@ Employee Roles:
     - "mentor"         -> "Mentor"
     - "assistent"      -> "Assistent"
 
-Speciality Values (for Mentors only):
+Professionality Values (for Mentors only):
     - "revit_architecture" -> "Revit Architecture"
     - "revit_structure"    -> "Revit Structure"
     - "tekla_structure"    -> "Tekla Structure"
@@ -386,6 +374,646 @@ Error Response:
 
 Note: Some endpoints may return Django REST Framework's default error format
       for certain error types (e.g., 401 Unauthorized).
+
+================================================================================
+================================================================================
+EMPLOYEE MANAGEMENT APIs (Developer or Administrator)
+================================================================================
+
+All Employee Management endpoints require Developer or Administrator role.
+Developers have full access to all employees. Administrators can only update
+lower roles (cannot update Director or Developer roles).
+
+1. LIST EMPLOYEES
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/auth/employees/
+Authentication: Required (JWT Bearer Token)
+Permission: Developer or Administrator role
+Description: Retrieve a list of all employees
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Query Parameters (optional):
+    - page: Page number for pagination (default: 1)
+    - page_size: Number of results per page (default: 20)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Employees retrieved successfully.",
+        "data": [
+            {
+                "id": 1,
+                "email": "employee@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "full_name": "John Doe",
+                "role": "mentor",
+                "role_display": "Mentor",
+                "professionality": "Revit Architecture Expert",
+                "avatar_url": "http://localhost:8000/media/avatars/employees/john.jpg",
+                "is_active": true,
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            }
+        ]
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Developer or Administrator role required
+
+--------------------------------------------------------------------------------
+2. GET EMPLOYEE
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/auth/employees/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Developer or Administrator role
+Description: Retrieve a specific employee by ID
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Path Parameters:
+    - id: Employee ID (integer)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Employee retrieved successfully.",
+        "data": {
+            "id": 1,
+            "email": "employee@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "full_name": "John Doe",
+            "role": "mentor",
+            "role_display": "Mentor",
+            "professionality": "Revit Architecture Expert",
+            "avatar": "/media/avatars/employees/john.jpg",
+            "avatar_url": "http://localhost:8000/media/avatars/employees/john.jpg",
+            "is_active": true,
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Developer or Administrator role required
+    - 404 Not Found: Employee not found
+
+--------------------------------------------------------------------------------
+3. UPDATE EMPLOYEE
+--------------------------------------------------------------------------------
+Endpoint: PATCH /api/v1/auth/employees/<id>/
+Endpoint: PUT /api/v1/auth/employees/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Developer or Administrator role
+Description: Update a specific employee (partial update with PATCH)
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json (or multipart/form-data for avatar)
+
+Path Parameters:
+    - id: Employee ID (integer)
+
+Request Body (JSON):
+    {
+        "role": "mentor",
+        "is_active": true,
+        "full_name": "John Updated Doe",
+        "professionality": "Revit Architecture Expert"
+    }
+
+Updatable Fields:
+    - role: Choice from available roles (restricted for Administrator)
+    - is_active: Boolean (user account status)
+    - full_name: String, max 255 characters
+    - professionality: Choice from available specialities (for mentors only)
+    - avatar: Image file (use multipart/form-data for file upload)
+
+Permission Rules:
+    - Developer: Can update ALL employees (including Director and Developer roles)
+    - Administrator: Can ONLY update lower roles (NOT Director or Developer)
+    - Administrator cannot assign Director or Developer roles
+    - Administrator cannot update employees with Director or Developer roles
+
+Validation:
+    - Administrator cannot assign Director or Developer roles
+    - Administrator cannot update employees with Director or Developer roles
+    - professionality is optional for all roles' role
+    - Professionality_id must NOT be set for non-'mentor' roles
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Employee updated successfully.",
+        "data": {
+            "id": 1,
+            "email": "employee@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "full_name": "John Updated Doe",
+            "role": "mentor",
+            "role_display": "Mentor",
+            "professionality": "Revit Architecture Expert",
+            "avatar": "/media/avatars/employees/john.jpg",
+            "avatar_url": "http://localhost:8000/media/avatars/employees/john.jpg",
+            "is_active": true,
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T13:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "role": ["Administrator cannot assign Director or Developer roles."],
+                "professionality is optional for all roles."]
+            }
+        }
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Permission denied - Cannot update Director or Developer roles
+        {
+            "detail": "Administrator cannot update Director or Developer roles."
+        }
+    - 404 Not Found: Employee not found
+
+Role Hierarchy:
+    1. Developer (dasturchi) - Full access (can update all roles)
+    2. Director (direktor) - Protected (cannot be updated by Administrator)
+    3. Administrator (administrator) - Limited access (can update lower roles only)
+    4. Other roles - Can be updated by Administrator
+
+GROUPS APIs (Administrator Only)
+================================================================================
+
+All Group endpoints require Administrator role. Groups represent courses/classes
+with specific specialities, schedules, and mentor assignments.
+
+1. LIST GROUPS
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/education/groups/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator role only
+Description: Retrieve a list of all groups
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Query Parameters (optional):
+    - page: Page number for pagination (default: 1)
+    - page_size: Number of results per page (default: 20)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Groups retrieved successfully.",
+        "data": [
+            {
+                "id": 1,
+                "professionality": "Revit Architecture Expert",
+                "dates": "mon_wed_fri",
+                "dates_display": "Monday - Wednesday - Friday",
+                "time": "14:00:00",
+                "starting_date": "2026-02-01",
+                "seats": 20,
+                "current_students_count": 15,
+                "available_seats": 5,
+                "is_planned": true,
+                "is_active": false,
+                "mentor": 1,
+                "mentor_name": "John Doe",
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            }
+        ]
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator role required
+
+--------------------------------------------------------------------------------
+2. CREATE GROUP
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/education/groups/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator role only
+Description: Create a new group
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "professionality": "Revit Architecture Expert",
+        "dates": "mon_wed_fri",
+        "time": "14:00:00",
+        "starting_date": "2026-02-01",
+        "seats": 20,
+        "mentor": 1
+    }
+
+Required Fields:
+    - professionality: Choice from available specialities
+    - dates: Choice from available dates ('mon_wed_fri' or 'tue_thu_sat')
+    - time: Time in HH:MM:SS format (e.g., "14:00:00")
+    - seats: Positive integer (maximum number of students)
+
+Optional Fields:
+    - starting_date: Date in YYYY-MM-DD format (for planned groups)
+    - mentor: ID of employee with Mentor role
+
+Validation:
+    - Mentor must have 'mentor' role
+    - Professionality_id must be a valid choice
+    - Dates must be a valid choice
+    - Seats must be a positive integer
+
+Success Response (201 Created):
+    {
+        "success": true,
+        "message": "Group created successfully.",
+        "data": {
+            "id": 1,
+            "professionality": "Revit Architecture Expert",
+            "dates": "mon_wed_fri",
+            "dates_display": "Monday - Wednesday - Friday",
+            "time": "14:00:00",
+            "starting_date": "2026-02-01",
+            "seats": 20,
+            "current_students_count": 0,
+            "available_seats": 20,
+            "is_planned": true,
+            "is_active": false,
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator role required
+
+--------------------------------------------------------------------------------
+3. GET GROUP
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/education/groups/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator role only
+Description: Retrieve a specific group by ID
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Group retrieved successfully.",
+        "data": {
+            "id": 1,
+            "professionality": "Revit Architecture Expert",
+            "dates": "mon_wed_fri",
+            "dates_display": "Monday - Wednesday - Friday",
+            "time": "14:00:00",
+            "starting_date": "2026-02-01",
+            "seats": 20,
+            "current_students_count": 15,
+            "available_seats": 5,
+            "is_planned": true,
+            "is_active": false,
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator role required
+    - 404 Not Found: Group not found
+
+--------------------------------------------------------------------------------
+4. UPDATE GROUP
+--------------------------------------------------------------------------------
+Endpoint: PATCH /api/v1/education/groups/<id>/
+Endpoint: PUT /api/v1/education/groups/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator role only
+Description: Update a specific group (partial update with PATCH)
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "seats": 25,
+        "mentor": 2
+    }
+
+Updatable Fields:
+    - professionality: Choice from available specialities
+    - dates: Choice from available dates
+    - time: Time in HH:MM:SS format
+    - starting_date: Date in YYYY-MM-DD format
+    - seats: Positive integer
+    - mentor: ID of employee with Mentor role
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Group updated successfully.",
+        "data": {
+            "id": 1,
+            "professionality": "Revit Architecture Expert",
+            "dates": "mon_wed_fri",
+            "dates_display": "Monday - Wednesday - Friday",
+            "time": "14:00:00",
+            "starting_date": "2026-02-01",
+            "seats": 25,
+            "current_students_count": 15,
+            "available_seats": 10,
+            "is_planned": true,
+            "is_active": false,
+            "mentor": 2,
+            "mentor_name": "Jane Smith",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:30:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator role required
+    - 404 Not Found: Group not found
+
+--------------------------------------------------------------------------------
+5. DELETE GROUP
+--------------------------------------------------------------------------------
+Endpoint: DELETE /api/v1/education/groups/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator role only
+Description: Delete a specific group
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Success Response (204 No Content):
+    {
+        "success": true,
+        "message": "Group deleted successfully.",
+        "data": null
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator role required
+    - 404 Not Found: Group not found
+
+================================================================================
+ATTENDANCES APIs (Administrator or Mentor)
+================================================================================
+
+All Attendance endpoints require Administrator or Mentor role. Attendances
+track student participation in group sessions.
+
+1. LIST ATTENDANCES
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/education/attendances/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator or Mentor role
+Description: Retrieve a list of all attendances
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Query Parameters (optional):
+    - page: Page number for pagination (default: 1)
+    - page_size: Number of results per page (default: 20)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Attendances retrieved successfully.",
+        "data": [
+            {
+                "id": 1,
+                "group": 1,
+                "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+                "date": "2026-01-10",
+                "time": "14:30:00",
+                "mentor": 1,
+                "mentor_name": "John Doe",
+                "participants": [1, 2, 3],
+                "participants_count": 3,
+                "participants_list": [
+                    {"id": 1, "full_name": "Student One", "phone": "+1234567890"},
+                    {"id": 2, "full_name": "Student Two", "phone": "+1234567891"},
+                    {"id": 3, "full_name": "Student Three", "phone": "+1234567892"}
+                ],
+                "created_at": "2026-01-10T14:30:00Z",
+                "updated_at": "2026-01-10T14:30:00Z"
+            }
+        ]
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator or Mentor role required
+
+--------------------------------------------------------------------------------
+2. CREATE ATTENDANCE
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/education/attendances/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator or Mentor role
+Description: Create a new attendance record
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "group": 1,
+        "date": "2026-01-10",
+        "mentor": 1,
+        "participants": [1, 2, 3]
+    }
+
+Required Fields:
+    - group: ID of the group
+    - date: Date in YYYY-MM-DD format
+
+Optional Fields:
+    - mentor: ID of employee with Mentor role
+    - participants: Array of student IDs (must be members of the group)
+
+Validation:
+    - Mentor must have 'mentor' role
+    - All participants must be members of the selected group
+    - Unique constraint: one attendance per group per date
+
+Success Response (201 Created):
+    {
+        "success": true,
+        "message": "Attendance created successfully.",
+        "data": {
+            "id": 1,
+            "group": 1,
+            "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+            "date": "2026-01-10",
+            "time": "14:30:00",
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "participants": [1, 2, 3],
+            "participants_count": 3,
+            "participants_list": [
+                {"id": 1, "full_name": "Student One", "phone": "+1234567890"},
+                {"id": 2, "full_name": "Student Two", "phone": "+1234567891"},
+                {"id": 3, "full_name": "Student Three", "phone": "+1234567892"}
+            ],
+            "created_at": "2026-01-10T14:30:00Z",
+            "updated_at": "2026-01-10T14:30:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator or Mentor role required
+
+--------------------------------------------------------------------------------
+3. GET ATTENDANCE
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/education/attendances/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator or Mentor role
+Description: Retrieve a specific attendance by ID
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Attendance retrieved successfully.",
+        "data": {
+            "id": 1,
+            "group": 1,
+            "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+            "date": "2026-01-10",
+            "time": "14:30:00",
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "participants": [1, 2, 3],
+            "participants_count": 3,
+            "participants_list": [
+                {"id": 1, "full_name": "Student One", "phone": "+1234567890"},
+                {"id": 2, "full_name": "Student Two", "phone": "+1234567891"},
+                {"id": 3, "full_name": "Student Three", "phone": "+1234567892"}
+            ],
+            "created_at": "2026-01-10T14:30:00Z",
+            "updated_at": "2026-01-10T14:30:00Z"
+        }
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator or Mentor role required
+    - 404 Not Found: Attendance not found
+
+--------------------------------------------------------------------------------
+4. UPDATE ATTENDANCE
+--------------------------------------------------------------------------------
+Endpoint: PATCH /api/v1/education/attendances/<id>/
+Endpoint: PUT /api/v1/education/attendances/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator or Mentor role
+Description: Update a specific attendance (partial update with PATCH)
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "participants": [1, 2, 3, 4]
+    }
+
+Updatable Fields:
+    - group: ID of the group
+    - date: Date in YYYY-MM-DD format
+    - mentor: ID of employee with Mentor role
+    - participants: Array of student IDs (must be members of the group)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Attendance updated successfully.",
+        "data": {
+            "id": 1,
+            "group": 1,
+            "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+            "date": "2026-01-10",
+            "time": "14:30:00",
+            "mentor": 1,
+            "mentor_name": "John Doe",
+            "participants": [1, 2, 3, 4],
+            "participants_count": 4,
+            "participants_list": [
+                {"id": 1, "full_name": "Student One", "phone": "+1234567890"},
+                {"id": 2, "full_name": "Student Two", "phone": "+1234567891"},
+                {"id": 3, "full_name": "Student Three", "phone": "+1234567892"},
+                {"id": 4, "full_name": "Student Four", "phone": "+1234567893"}
+            ],
+            "created_at": "2026-01-10T14:30:00Z",
+            "updated_at": "2026-01-10T14:35:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator or Mentor role required
+    - 404 Not Found: Attendance not found
+
+--------------------------------------------------------------------------------
+5. DELETE ATTENDANCE
+--------------------------------------------------------------------------------
+Endpoint: DELETE /api/v1/education/attendances/<id>/
+Authentication: Required (JWT Bearer Token)
+Permission: Administrator or Mentor role
+Description: Delete a specific attendance
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Success Response (204 No Content):
+    {
+        "success": true,
+        "message": "Attendance deleted successfully.",
+        "data": null
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 403 Forbidden: Administrator or Mentor role required
+    - 404 Not Found: Attendance not found
 
 ================================================================================
 HTTP STATUS CODES
@@ -427,12 +1055,25 @@ NOTES
 LAST UPDATED
 ================================================================================
 
-Date: 2026-01-10
+Date: 2026-01-11
 APIs Documented:
     - Employee Registration (POST /api/v1/auth/register/)
     - Employee Login (POST /api/v1/auth/login/)
     - Employee Profile - Get (GET /api/v1/auth/profile/)
     - Employee Profile - Update (PATCH /api/v1/auth/profile/)
     - Token Refresh (POST /api/v1/auth/token/refresh/)
+    - Employee Management - List (GET /api/v1/auth/employees/)
+    - Employee Management - Get (GET /api/v1/auth/employees/<id>/)
+    - Employee Management - Update (PATCH/PUT /api/v1/auth/employees/<id>/)
+    - Groups - List (GET /api/v1/education/groups/)
+    - Groups - Create (POST /api/v1/education/groups/)
+    - Groups - Get (GET /api/v1/education/groups/<id>/)
+    - Groups - Update (PATCH/PUT /api/v1/education/groups/<id>/)
+    - Groups - Delete (DELETE /api/v1/education/groups/<id>/)
+    - Attendances - List (GET /api/v1/education/attendances/)
+    - Attendances - Create (POST /api/v1/education/attendances/)
+    - Attendances - Get (GET /api/v1/education/attendances/<id>/)
+    - Attendances - Update (PATCH/PUT /api/v1/education/attendances/<id>/)
+    - Attendances - Delete (DELETE /api/v1/education/attendances/<id>/)
 
 ================================================================================

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from user.models import User, Employee, Role, Speciality
+from user.models import User, Employee, Role
 from user.api.exceptions import EmployeeAlreadyExistsError
 
 
@@ -13,11 +13,11 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
     
     full_name = serializers.CharField(required=True, max_length=255)
     role = serializers.ChoiceField(choices=Role.choices, required=True)
-    speciality_id = serializers.ChoiceField(
-        choices=Speciality.choices,
+    professionality = serializers.CharField(
         required=False,
         allow_null=True,
-        allow_blank=True
+        allow_blank=True,
+        max_length=255
     )
     avatar = serializers.ImageField(required=False, allow_null=True)
     
@@ -25,7 +25,7 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
         model = Employee
         fields = [
             'email', 'first_name', 'last_name', 'password', 'password_confirm',
-            'full_name', 'role', 'speciality_id', 'avatar'
+            'full_name', 'role', 'professionality', 'avatar'
         ]
     
     def validate_email(self, value):
@@ -37,19 +37,6 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({
                 'password_confirm': 'Passwords do not match.'
-            })
-        
-        role = attrs.get('role')
-        speciality_id = attrs.get('speciality_id')
-        
-        if role == 'mentor' and not speciality_id:
-            raise serializers.ValidationError({
-                'speciality_id': 'Speciality is required for Mentors.'
-            })
-        
-        if role != 'mentor' and speciality_id:
-            raise serializers.ValidationError({
-                'speciality_id': 'Speciality should only be set for Mentors.'
             })
         
         return attrs
@@ -81,7 +68,6 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     role_display = serializers.CharField(source='get_role_display', read_only=True)
-    speciality_display = serializers.CharField(source='get_speciality_id_display', read_only=True)
     avatar_url = serializers.SerializerMethodField()
     role = serializers.CharField(read_only=True)
     
@@ -90,27 +76,10 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name',
             'full_name', 'role', 'role_display',
-            'speciality_id', 'speciality_display',
+            'professionality',
             'avatar', 'avatar_url', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'role', 'created_at', 'updated_at']
-    
-    def validate(self, attrs):
-        if self.instance:
-            role = self.instance.role
-            speciality_id = attrs.get('speciality_id', self.instance.speciality_id)
-            
-            if role == 'mentor' and not speciality_id:
-                raise serializers.ValidationError({
-                    'speciality_id': 'Speciality is required for Mentors.'
-                })
-            
-            if role != 'mentor' and speciality_id:
-                raise serializers.ValidationError({
-                    'speciality_id': 'Speciality should only be set for Mentors.'
-                })
-        
-        return attrs
     
     def get_avatar_url(self, obj):
         if obj.avatar:
@@ -129,8 +98,14 @@ class EmployeeLoginSerializer(serializers.Serializer):
         email = attrs.get('email')
         password = attrs.get('password')
         
-        user = User.objects.filter(email=email).first()
-        if not user:
+        if not email or not password:
+            raise serializers.ValidationError({
+                'email': 'Email and password are required.'
+            })
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
             raise serializers.ValidationError({
                 'email': 'Invalid email or password.'
             })

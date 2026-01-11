@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html, mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from .models import User, Employee, Student, Speciality, Role, Source
+from .models import User, Employee, Student, Role, Source
 
 
 @admin.register(User)
@@ -32,11 +32,12 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
+
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     
-    list_display = ('full_name', 'user', 'get_role_display', 'get_speciality_display_conditional', 'avatar_preview', 'created_at')
-    list_filter = ('role', 'speciality_id', 'created_at', 'updated_at')
+    list_display = ('full_name', 'user', 'get_role_display', 'professionality', 'avatar_preview', 'created_at')
+    list_filter = ('role', 'professionality', 'created_at', 'updated_at')
     search_fields = ('full_name', 'user__email', 'user__first_name', 'user__last_name')
     readonly_fields = ('created_at', 'updated_at', 'avatar_preview')
     ordering = ('-created_at',)
@@ -47,38 +48,13 @@ class EmployeeAdmin(admin.ModelAdmin):
             'fields': ('user', 'full_name', 'avatar', 'avatar_preview')
         }),
         (_('Professional Information'), {
-            'fields': ('role', 'speciality_id')
+            'fields': ('role', 'professionality')
         }),
         (_('Timestamps'), {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
-    
-    def get_fieldsets(self, request, obj=None):
-        fieldsets = list(super().get_fieldsets(request, obj))
-        
-        if obj and obj.role != 'mentor':
-            for fieldset in fieldsets:
-                if fieldset[0] == _('Professional Information'):
-                    fields = list(fieldset[1]['fields'])
-                    if 'speciality_id' in fields:
-                        fields.remove('speciality_id')
-                    fieldset[1]['fields'] = tuple(fields)
-        
-        return fieldsets
-    
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        
-        if 'speciality_id' in form.base_fields:
-            form.base_fields['speciality_id'].help_text = 'Required only for Mentors'
-            form.base_fields['speciality_id'].required = False
-        
-        return form
-    
-    class Media:
-        js = ('admin/js/employee_admin.js',)
     
     def avatar_preview(self, obj):
         if not obj:
@@ -96,22 +72,6 @@ class EmployeeAdmin(admin.ModelAdmin):
             return ''
         return dict(Role.choices).get(obj.role, obj.role)
     get_role_display.short_description = 'Role'  # type: ignore
-    
-    def get_speciality_display(self, obj):
-        if not obj:
-            return ''
-        return dict(Speciality.choices).get(obj.speciality_id, obj.speciality_id)
-    get_speciality_display.short_description = 'Speciality'  # type: ignore
-    
-    def get_speciality_display_conditional(self, obj):
-        if not obj:
-            return ''
-        if obj.role != 'mentor':
-            return mark_safe('<span style="color: #999;">-</span>')
-        if obj.speciality_id:
-            return dict(Speciality.choices).get(obj.speciality_id, obj.speciality_id)
-        return mark_safe('<span style="color: #e74c3c;">Required</span>')
-    get_speciality_display_conditional.short_description = 'Speciality'  # type: ignore
 
 
 @admin.register(Student)
@@ -165,7 +125,7 @@ class StudentAdmin(admin.ModelAdmin):
                 obj.certificate.url
             )
         return mark_safe('<span style="color: #999;">No certificate</span>')
-    certificate_link.short_description = 'Certificate'  # type: ignore
+    certificate_link.short_description = 'Certificate'
     
     def get_queryset(self, request):
         queryset = super().get_queryset(request)

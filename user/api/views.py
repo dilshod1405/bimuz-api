@@ -144,7 +144,7 @@ class EmployeeProfileView(generics.RetrieveUpdateAPIView):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        allowed_fields = ['full_name', 'speciality_id', 'avatar']
+        allowed_fields = ['full_name', 'professionality', 'avatar']
         data = {k: v for k, v in request.data.items() if k in allowed_fields}
         
         serializer = self.get_serializer(

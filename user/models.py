@@ -88,13 +88,12 @@ class Employee(BaseModel):
         related_name='employee_profile',
         verbose_name='User'
     )
-    speciality_id = models.CharField(
-        max_length=50,
-        choices=Speciality.choices,
+    professionality = models.CharField(
+        max_length=255,
         null=True,
         blank=True,
-        verbose_name='Speciality',
-        help_text='Required only for Mentors'
+        verbose_name='Professionality',
+        help_text='Professional expertise or specialization'
     )
     full_name = models.CharField(max_length=255, verbose_name='Full Name')
     avatar = models.ImageField(
@@ -114,18 +113,6 @@ class Employee(BaseModel):
         verbose_name = 'Employee'
         verbose_name_plural = 'Employees'
         ordering = ['-created_at']
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        
-        if self.role == 'mentor' and not self.speciality_id:
-            raise ValidationError({
-                'speciality_id': 'Speciality is required for Mentors.'
-            })
-        if self.role != 'mentor' and self.speciality_id:
-            raise ValidationError({
-                'speciality_id': 'Speciality should only be set for Mentors.'
-            })
 
     def save(self, *args, **kwargs):
         self.full_clean()

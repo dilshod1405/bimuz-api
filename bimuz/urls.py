@@ -25,6 +25,7 @@ urlpatterns = [
     path('i18n/setlang/', set_language, name='set_language'),
     
     path('api/v1/auth/', include('user.api.urls')),
+    path('api/v1/education/', include('education.api.urls')),
     
     # Swagger/ReDoc URLs
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),

@@ -39,6 +39,11 @@ class Group(BaseModel):
         null=True,
         blank=True
     )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Is Active',
+        help_text='Automatically set to True when starting_date is reached'
+    )
     seats = models.PositiveIntegerField(
         verbose_name='Maximum Students'
     )
@@ -70,6 +75,10 @@ class Group(BaseModel):
             })
 
     def save(self, *args, **kwargs):
+        if self.starting_date:
+            from django.utils import timezone
+            if self.starting_date <= timezone.now().date():
+                self.is_active = True
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -90,13 +99,6 @@ class Group(BaseModel):
             return False
         from django.utils import timezone
         return self.starting_date > timezone.now().date()
-    
-    @property
-    def is_active(self) -> bool:
-        if not self.starting_date:
-            return True
-        from django.utils import timezone
-        return self.starting_date <= timezone.now().date()
 
 
 class Attendance(BaseModel):
