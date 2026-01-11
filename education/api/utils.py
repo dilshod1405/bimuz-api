@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-def success_response(data=None, message='Success', status_code=status.HTTP_200_OK):
+def success_response(data=None, message='Muvaffaqiyatli', status_code=status.HTTP_200_OK):
     return Response({
         'success': True,
         'message': message,
@@ -10,7 +10,7 @@ def success_response(data=None, message='Success', status_code=status.HTTP_200_O
     }, status=status_code)
 
 
-def error_response(message='Error', errors=None, status_code=status.HTTP_400_BAD_REQUEST, data=None):
+def error_response(message='Xatolik', errors=None, status_code=status.HTTP_400_BAD_REQUEST, data=None):
     response_data = {
         'success': False,
         'message': message,

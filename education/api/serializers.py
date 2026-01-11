@@ -25,7 +25,7 @@ class GroupSerializer(serializers.ModelSerializer):
     
     def validate_mentor(self, value):
         if value and value.role != 'mentor':
-            raise serializers.ValidationError('Selected employee must have Mentor role.')
+            raise serializers.ValidationError('Tanlangan xodim Mentor roliga ega bo\'lishi kerak.')
         return value
 
 
@@ -74,7 +74,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     
     def validate_mentor(self, value):
         if value and value.role != 'mentor':
-            raise serializers.ValidationError('Selected employee must have Mentor role.')
+            raise serializers.ValidationError('Tanlangan xodim Mentor roliga ega bo\'lishi kerak.')
         return value
     
     def validate(self, attrs):
@@ -89,7 +89,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             invalid_participants = participant_ids - group_student_ids
             if invalid_participants:
                 raise serializers.ValidationError({
-                    'participants': 'All participants must be members of the selected group.'
+                    'participants': 'Barcha ishtirokchilar tanlangan guruhning a\'zosi bo\'lishi kerak.'
                 })
         
         return attrs

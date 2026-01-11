@@ -76,16 +76,16 @@ class StudentBookingCreateView(generics.CreateAPIView):
                 
                 if student.group:
                     return error_response(
-                        message='Student is already booked in another group.',
-                        errors={'student_id': ['Student already has a booking.']},
+                        message='Talaba boshqa guruhga allaqachon yozilgan.',
+                        errors={'student_id': ['Talaba allaqachon guruhga yozilgan.']},
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
                 
                 if group.available_seats <= 0:
                     alternatives = self._get_alternative_groups(group)
                     return error_response(
-                        message='No available seats in this group.',
-                        errors={'group_id': ['Group is full.']},
+                        message='Bu guruhda bo\'sh o\'rin yo\'q.',
+                        errors={'group_id': ['Guruh to\'liq.']},
                         status_code=status.HTTP_400_BAD_REQUEST,
                         data={'alternatives': alternatives} if alternatives else None
                     )
@@ -95,8 +95,8 @@ class StudentBookingCreateView(generics.CreateAPIView):
                     if days_since is not None and days_since >= 10:
                         alternatives = self._get_alternative_groups(group)
                         return error_response(
-                            message=f'Cannot book this group. It started {days_since} days ago (10-day limit exceeded).',
-                            errors={'group_id': ['10-day booking limit exceeded.']},
+                            message=f'Bu guruhga yozilish mumkin emas. Guruh {days_since} kun oldin boshlangan (10 kunlik cheklov oshib ketgan).',
+                            errors={'group_id': ['10 kunlik yozilish muddati oshib ketgan.']},
                             status_code=status.HTTP_400_BAD_REQUEST,
                             data={'alternatives': alternatives} if alternatives else None
                         )
@@ -114,19 +114,19 @@ class StudentBookingCreateView(generics.CreateAPIView):
                             'group': group_serializer.data
                         }
                     },
-                    message='Student booked successfully into the group.',
+                    message='Talaba muvaffaqiyatli guruhga yozildi.',
                     status_code=status.HTTP_201_CREATED
                 )
         except Student.DoesNotExist:
             return error_response(
-                message='Student not found.',
-                errors={'student_id': ['Student does not exist.']},
+                message='Talaba topilmadi.',
+                errors={'student_id': ['Talaba mavjud emas.']},
                 status_code=status.HTTP_404_NOT_FOUND
             )
         except Group.DoesNotExist:
             return error_response(
-                message='Group not found.',
-                errors={'group_id': ['Group does not exist.']},
+                message='Guruh topilmadi.',
+                errors={'group_id': ['Guruh mavjud emas.']},
                 status_code=status.HTTP_404_NOT_FOUND
             )
     
@@ -178,8 +178,8 @@ class StudentBookingCancelView(generics.GenericAPIView):
         
         if not student_id:
             return error_response(
-                message='student_id is required.',
-                errors={'student_id': ['This field is required.']},
+                message='student_id talab qilinadi.',
+                errors={'student_id': ['Bu maydon to\'ldirilishi shart.']},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
@@ -189,8 +189,8 @@ class StudentBookingCancelView(generics.GenericAPIView):
                 
                 if not student.group:
                     return error_response(
-                        message='Student has no active booking.',
-                        errors={'student_id': ['Student is not booked in any group.']},
+                        message='Talabaning faol yozilishi yo\'q.',
+                        errors={'student_id': ['Talaba hech qanday guruhga yozilmagan.']},
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
                 
@@ -207,12 +207,12 @@ class StudentBookingCancelView(generics.GenericAPIView):
                             'group_name': str(group)
                         }
                     },
-                    message='Booking cancelled successfully.',
+                    message='Yozilish muvaffaqiyatli bekor qilindi.',
                     status_code=status.HTTP_200_OK
                 )
         except Student.DoesNotExist:  # type: ignore
             return error_response(
-                message='Student not found.',
-                errors={'student_id': ['Student does not exist.']},
+                message='Talaba topilmadi.',
+                errors={'student_id': ['Talaba mavjud emas.']},
                 status_code=status.HTTP_404_NOT_FOUND
             )

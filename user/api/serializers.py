@@ -36,7 +36,7 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({
-                'password_confirm': 'Passwords do not match.'
+                'password_confirm': 'Parollar mos kelmaydi.'
             })
         
         return attrs
@@ -100,24 +100,24 @@ class EmployeeLoginSerializer(serializers.Serializer):
         
         if not email or not password:
             raise serializers.ValidationError({
-                'email': 'Email and password are required.'
+                'email': 'Email va parol talab qilinadi.'
             })
         
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise serializers.ValidationError({
-                'email': 'Invalid email or password.'
+                'email': 'Noto\'g\'ri email yoki parol.'
             })
         
         if not user.check_password(password):
             raise serializers.ValidationError({
-                'email': 'Invalid email or password.'
+                'email': 'Noto\'g\'ri email yoki parol.'
             })
         
         if not hasattr(user, 'employee_profile'):
             raise serializers.ValidationError({
-                'email': 'No employee profile found for this user.'
+                'email': 'Bu foydalanuvchi uchun xodim profili topilmadi.'
             })
         
         attrs['user'] = user

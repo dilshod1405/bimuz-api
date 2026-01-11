@@ -38,7 +38,7 @@ class EmployeeListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message='Employees retrieved successfully.'
+            message='Xodimlar muvaffaqiyatli yuklandi.'
         )
 
 
@@ -60,9 +60,9 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateAPIView):
                 target_role = obj.role
                 if target_role in ['dasturchi', 'direktor']:
                     from rest_framework.exceptions import PermissionDenied
-                    raise PermissionDenied('Administrator cannot update Director or Developer roles.')
+                    raise PermissionDenied('Administrator Direktor yoki Dasturchi rollarini yangilay olmaydi.')
     
-    def get_serializer_class(self):
+    def get_serializer_class(self):  # type: ignore
         if self.request.method in ['PUT', 'PATCH']:
             return EmployeeUpdateSerializer
         return EmployeeDetailSerializer
@@ -83,7 +83,7 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance, context={'request': request})
         return success_response(
             data=serializer.data,
-            message='Employee retrieved successfully.'
+            message='Xodim muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -136,5 +136,5 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         response_serializer = EmployeeDetailSerializer(instance, context={'request': request})
         return success_response(
             data=response_serializer.data,
-            message='Employee updated successfully.'
+            message='Xodim muvaffaqiyatli yangilandi.'
         )

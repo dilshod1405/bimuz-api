@@ -69,7 +69,7 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
         
         if user_role == 'administrator':
             if value in ['dasturchi', 'direktor']:
-                raise serializers.ValidationError('Administrator cannot assign Director or Developer roles.')
+                raise serializers.ValidationError('Administrator Direktor yoki Dasturchi rollarini tayinlay olmaydi.')
         
         return value
     

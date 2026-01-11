@@ -53,7 +53,7 @@ class EmployeeRegistrationView(generics.CreateAPIView):
                     'access': str(refresh.access_token),
                 }
             },
-            message='Employee registered successfully.',
+            message='Xodim muvaffaqiyatli ro\'yxatdan o\'tdi.',
             status_code=status.HTTP_201_CREATED
         )
 
@@ -94,7 +94,7 @@ class EmployeeLoginView(generics.GenericAPIView):
                     'access': str(refresh.access_token),
                 }
             },
-            message='Login successful.',
+            message='Kirish muvaffaqiyatli.',
             status_code=status.HTTP_200_OK
         )
 
@@ -124,7 +124,7 @@ class EmployeeProfileView(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance, context={'request': request})
         return success_response(
             data=serializer.data,
-            message='Employee profile retrieved successfully.'
+            message='Xodim profili muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -158,5 +158,5 @@ class EmployeeProfileView(generics.RetrieveUpdateAPIView):
         
         return success_response(
             data=serializer.data,
-            message='Employee profile updated successfully.'
+            message='Xodim profili muvaffaqiyatli yangilandi.'
         )

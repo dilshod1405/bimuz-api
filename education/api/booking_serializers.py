@@ -37,14 +37,14 @@ class StudentBookingSerializer(serializers.Serializer):
         try:
             student = Student._default_manager.get(id=value)
         except Student.DoesNotExist:
-            raise serializers.ValidationError('Student not found.')
+            raise serializers.ValidationError('Talaba topilmadi.')
         return value
     
     def validate_group_id(self, value):
         try:
             group = Group._default_manager.get(id=value)
         except Group.DoesNotExist:
-            raise serializers.ValidationError('Group not found.')
+            raise serializers.ValidationError('Guruh topilmadi.')
         return value
     
     def validate(self, attrs):
@@ -56,24 +56,24 @@ class StudentBookingSerializer(serializers.Serializer):
         
         if student.group and student.group.id == group_id:
             raise serializers.ValidationError({
-                'group_id': 'Student is already booked in this group.'
+                'group_id': 'Talaba allaqachon bu guruhga yozilgan.'
             })
         
         if student.group:
             raise serializers.ValidationError({
-                'student_id': 'Student is already booked in another group. Please cancel the existing booking first.'
+                'student_id': 'Talaba boshqa guruhga yozilgan. Avval mavjud yozilishni bekor qiling.'
             })
         
         if group.available_seats <= 0:
             raise serializers.ValidationError({
-                'group_id': 'No available seats in this group.'
+                'group_id': 'Bu guruhda bo\'sh o\'rin yo\'q.'
             })
         
         if not group.can_accept_bookings():
             days_since = group.days_since_start()
             if days_since is not None and days_since >= 10:
                 raise serializers.ValidationError({
-                    'group_id': f'Cannot book this group. It started {days_since} days ago (10-day limit exceeded).'
+                    'group_id': f'Bu guruhga yozilish mumkin emas. Guruh {days_since} kun oldin boshlangan (10 kunlik cheklov oshib ketgan).'
                 })
         
         return attrs

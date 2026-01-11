@@ -71,7 +71,7 @@ class Group(BaseModel):
     def clean(self):
         if self.mentor and hasattr(self.mentor, 'role') and self.mentor.role != 'mentor':  # type: ignore
             raise ValidationError({
-                'mentor': 'Selected employee must have Mentor role.'
+                'mentor': 'Tanlangan xodim Mentor roliga ega bo\'lishi kerak.'
             })
 
     def save(self, *args, **kwargs):
@@ -171,7 +171,7 @@ class Attendance(BaseModel):
     def clean(self):
         if self.mentor and hasattr(self.mentor, 'role') and self.mentor.role != 'mentor':  # type: ignore
             raise ValidationError({
-                'mentor': 'Selected employee must have Mentor role.'
+                'mentor': 'Tanlangan xodim Mentor roliga ega bo\'lishi kerak.'
             })
         
         if self.pk and hasattr(self, 'participants'):
@@ -181,7 +181,7 @@ class Attendance(BaseModel):
                 invalid_participants = participants.exclude(id__in=group_students.values_list('id', flat=True))
                 if invalid_participants.exists():
                     raise ValidationError({
-                        'participants': 'All participants must be members of the selected group.'
+                        'participants': 'Barcha ishtirokchilar tanlangan guruhning a\'zosi bo\'lishi kerak.'
                     })
 
     def save(self, *args, **kwargs):

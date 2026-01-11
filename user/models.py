@@ -125,8 +125,8 @@ class Employee(BaseModel):
 
 class Student(BaseModel):
     phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+        regex=r'^\+?1?\d{9,13}$',
+        message="Telefon raqami '+999999999' formatida kiritilishi kerak. Maksimal 13 raqam."
     )
     
     full_name = models.CharField(max_length=255, verbose_name='Full Name')

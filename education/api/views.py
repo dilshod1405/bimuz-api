@@ -16,10 +16,10 @@ from user.api.utils import success_response
 
 
 class GroupListCreateView(generics.ListCreateAPIView):
-    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()
+    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()  # type: ignore
     permission_classes = [IsAdministrator]
     
-    def get_serializer_class(self):
+    def get_serializer_class(self):  # type: ignore
         if self.request.method == 'POST':
             return GroupCreateSerializer
         return GroupSerializer
@@ -44,7 +44,7 @@ class GroupListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message='Groups retrieved successfully.'
+            message='Guruhlar muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -69,17 +69,17 @@ class GroupListCreateView(generics.ListCreateAPIView):
         response_serializer = GroupSerializer(group, context={'request': request})
         return success_response(
             data=response_serializer.data,
-            message='Group created successfully.',
+            message='Guruh muvaffaqiyatli yaratildi.',
             status_code=status.HTTP_201_CREATED
         )
 
 
 class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()
+    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()  # type: ignore
     permission_classes = [IsAdministrator]
     lookup_field = 'pk'
     
-    def get_serializer_class(self):
+    def get_serializer_class(self):  # type: ignore
         if self.request.method in ['PUT', 'PATCH']:
             return GroupUpdateSerializer
         return GroupSerializer
@@ -100,7 +100,7 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(instance, context={'request': request})
         return success_response(
             data=serializer.data,
-            message='Group retrieved successfully.'
+            message='Guruh muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -150,7 +150,7 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         instance.delete()
         return success_response(
-            message='Group deleted successfully.',
+            message='Guruh muvaffaqiyatli o\'chirildi.',
             status_code=status.HTTP_204_NO_CONTENT
         )
     
@@ -165,12 +165,12 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         
         return success_response(
             data=serializer.data,
-            message='Group updated successfully.'
+            message='Guruh muvaffaqiyatli yangilandi.'
         )
 
 
 class AttendanceListCreateView(generics.ListCreateAPIView):
-    queryset = Attendance.objects.select_related(
+    queryset = Attendance.objects.select_related(  # type: ignore
         'group', 'group__mentor', 'group__mentor__user', 'mentor', 'mentor__user'
     ).prefetch_related('participants').all()
     serializer_class = AttendanceSerializer
@@ -196,7 +196,7 @@ class AttendanceListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message='Attendances retrieved successfully.'
+            message='Davomatlar muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -221,13 +221,13 @@ class AttendanceListCreateView(generics.ListCreateAPIView):
         response_serializer = AttendanceSerializer(attendance, context={'request': request})
         return success_response(
             data=response_serializer.data,
-            message='Attendance created successfully.',
+            message='Davomat muvaffaqiyatli yaratildi.',
             status_code=status.HTTP_201_CREATED
         )
 
 
 class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Attendance.objects.select_related(
+    queryset = Attendance.objects.select_related(  # type: ignore
         'group', 'group__mentor', 'group__mentor__user', 'mentor', 'mentor__user'
     ).prefetch_related('participants').all()
     serializer_class = AttendanceSerializer
@@ -250,7 +250,7 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
         serializer = self.get_serializer(instance, context={'request': request})
         return success_response(
             data=serializer.data,
-            message='Attendance retrieved successfully.'
+            message='Davomat muvaffaqiyatli yuklandi.'
         )
     
     @swagger_auto_schema(
@@ -300,7 +300,7 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
         instance = self.get_object()
         instance.delete()
         return success_response(
-            message='Attendance deleted successfully.',
+            message='Davomat muvaffaqiyatli o\'chirildi.',
             status_code=status.HTTP_204_NO_CONTENT
         )
     
@@ -315,5 +315,5 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
         
         return success_response(
             data=serializer.data,
-            message='Attendance updated successfully.'
+            message='Davomat muvaffaqiyatli yangilandi.'
         )
