@@ -1249,6 +1249,145 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Payment",
+			"item": [
+				{
+					"name": "List Invoices",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment/invoices/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment",
+								"invoices",
+								""
+							]
+						},
+						"description": "List all invoices. Students can see only their own invoices. Staff/admin can see all invoices.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Response:**\n- Returns list of invoices with full details\n- Students see only their own invoices\n- Staff/admin see all invoices\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view invoices"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment/invoices/{{invoice_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment",
+								"invoices",
+								"{{invoice_id}}",
+								""
+							]
+						},
+						"description": "Get detailed information about a specific invoice.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**URL Parameters:**\n- invoice_id: Invoice ID (integer, required)\n\n**Response:**\n- Returns full invoice details including payment status, Multicard UUID, checkout URL, etc.\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Payment Link",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_id\": 1,\n    \"lang\": \"uz\",\n    \"return_url\": \"https://example.com/payment/success\",\n    \"return_error_url\": \"https://example.com/payment/error\",\n    \"send_sms\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment/create-payment/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment",
+								"create-payment",
+								""
+							]
+						},
+						"description": "Create a payment link for an invoice via Multicard payment gateway.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Body:**\n- invoice_id: ID of the invoice to pay (integer, required)\n- lang: Payment page language. Options: \"ru\", \"uz\", \"en\". Default: \"uz\" (optional)\n- return_url: URL to redirect after successful payment (optional)\n- return_error_url: URL to redirect after payment error (optional)\n- send_sms: Send invoice link via SMS to student. Default: false (optional)\n\n**Response:**\n- Returns checkout_url, short_link, deeplink, and uuid for payment\n\n**Error Responses:**\n- 400: Invoice is already paid, cancelled, or failed to create payment link\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to pay this invoice\n- 404: Invoice not found\n- 500: Server error during payment link creation"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Invoice Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment/check-status/?invoice_id={{invoice_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payment",
+								"check-status",
+								""
+							],
+							"query": [
+								{
+									"key": "invoice_id",
+									"value": "{{invoice_id}}",
+									"description": "Invoice ID to check"
+								}
+							]
+						},
+						"description": "Check the current payment status of an invoice from Multicard.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Query Parameters:**\n- invoice_id: Invoice ID to check (integer, required)\n\n**Response:**\n- Returns current invoice status, Multicard status, checkout URL, receipt URL, and payment time\n\n**Error Responses:**\n- 400: invoice_id parameter is required or failed to get status\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -1283,6 +1422,12 @@
 			"value": "",
 			"type": "string",
 			"description": "Automatically set after booking a student"
+		},
+		{
+			"key": "invoice_id",
+			"value": "",
+			"type": "string",
+			"description": "Invoice ID for payment operations"
 		}
 	]
 }

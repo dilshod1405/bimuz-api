@@ -1601,10 +1601,306 @@ NOTES
    new versions are released.
 
 ================================================================================
+PAYMENT APIs
+================================================================================
+
+The payment system integrates with Multicard payment gateway to handle student
+group payments. Invoices are automatically generated when students book groups.
+
+1. LIST INVOICES
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/payment/invoices/
+Authentication: Required (JWT Bearer Token)
+Description: List all invoices. Students can see only their own invoices.
+             Staff/admin can see all invoices.
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Query Parameters:
+    None
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "student": 5,
+                "student_name": "John Doe",
+                "student_phone": "+998901234567",
+                "group": 3,
+                "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+                "amount": "500000.00",
+                "status": "created",
+                "status_display": "Created",
+                "is_paid": false,
+                "multicard_uuid": null,
+                "multicard_invoice_id": null,
+                "checkout_url": null,
+                "receipt_url": null,
+                "payment_time": null,
+                "payment_method": null,
+                "card_pan": null,
+                "notes": null,
+                "created_at": "2026-01-12T10:00:00Z",
+                "updated_at": "2026-01-12T10:00:00Z"
+            }
+        ]
+    }
+
+Error Responses:
+    401 Unauthorized: Invalid or missing authentication token
+    403 Forbidden: User does not have permission to view invoices
+
+2. GET INVOICE DETAILS
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/payment/invoices/<id>/
+Authentication: Required (JWT Bearer Token)
+Description: Get detailed information about a specific invoice.
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+URL Parameters:
+    id: Invoice ID (integer)
+
+Success Response (200 OK):
+    {
+        "id": 1,
+        "student": 5,
+        "student_name": "John Doe",
+        "student_phone": "+998901234567",
+        "group": 3,
+        "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+        "amount": "500000.00",
+        "status": "pending",
+        "status_display": "Pending Payment",
+        "is_paid": false,
+        "multicard_uuid": "f6339f31-6a09-11f0-9a1b-00505680eaf6",
+        "multicard_invoice_id": "1",
+        "checkout_url": "https://app.rhmt.uz/invoice/f6339f31-6a09-11f0-9a1b-00505680eaf6",
+        "receipt_url": null,
+        "payment_time": null,
+        "payment_method": null,
+        "card_pan": null,
+        "notes": null,
+        "created_at": "2026-01-12T10:00:00Z",
+        "updated_at": "2026-01-12T10:05:00Z"
+    }
+
+Error Responses:
+    401 Unauthorized: Invalid or missing authentication token
+    403 Forbidden: User does not have permission to view this invoice
+    404 Not Found: Invoice not found
+
+3. CREATE PAYMENT LINK
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/payment/create-payment/
+Authentication: Required (JWT Bearer Token)
+Description: Create a payment link for an invoice via Multicard payment gateway.
+             This generates a checkout URL that the student can use to pay.
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "invoice_id": 1,
+        "lang": "uz",
+        "return_url": "https://example.com/payment/success",
+        "return_error_url": "https://example.com/payment/error",
+        "send_sms": false
+    }
+
+Required Fields:
+    - invoice_id: Integer, ID of the invoice to pay
+
+Optional Fields:
+    - lang: String, Payment page language. Options: "ru", "uz", "en". Default: "uz"
+    - return_url: String (URL), URL to redirect after successful payment
+    - return_error_url: String (URL), URL to redirect after payment error
+    - send_sms: Boolean, Send invoice link via SMS to student. Default: false
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "data": {
+            "checkout_url": "https://app.rhmt.uz/invoice/f6339f31-6a09-11f0-9a1b-00505680eaf6",
+            "short_link": "https://l.multicard.uz/1m1e12",
+            "deeplink": "https://multicard.app/payments/checkout/6?params=...",
+            "uuid": "f6339f31-6a09-11f0-9a1b-00505680eaf6",
+            "invoice_id": 1
+        },
+        "message": "Payment link created successfully"
+    }
+
+Error Responses:
+    400 Bad Request:
+        - Invoice is already paid
+        - Invoice is cancelled
+        - Failed to create payment link in Multicard
+    401 Unauthorized: Invalid or missing authentication token
+    403 Forbidden: User does not have permission to pay this invoice
+    404 Not Found: Invoice not found
+    500 Internal Server Error: Server error during payment link creation
+
+4. CHECK INVOICE STATUS
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/payment/check-status/
+Authentication: Required (JWT Bearer Token)
+Description: Check the current payment status of an invoice from Multicard.
+             This endpoint queries Multicard API for the latest status.
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Query Parameters:
+    invoice_id: Integer (required) - Invoice ID to check
+
+Example Request:
+    GET /api/v1/payment/check-status/?invoice_id=1
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "data": {
+            "invoice_id": 1,
+            "status": "paid",
+            "multicard_status": "success",
+            "checkout_url": "https://app.rhmt.uz/invoice/f6339f31-6a09-11f0-9a1b-00505680eaf6",
+            "receipt_url": "https://dev-checkout.multicard.uz/check/f6339f31-6a09-11f0-9a1b-00505680eaf6",
+            "payment_time": "2026-01-12T10:30:00Z"
+        }
+    }
+
+Error Responses:
+    400 Bad Request:
+        - invoice_id parameter is required
+        - Failed to get invoice status from Multicard
+    401 Unauthorized: Invalid or missing authentication token
+    403 Forbidden: User does not have permission to view this invoice
+    404 Not Found: Invoice not found
+
+5. PAYMENT CALLBACK (Internal - Multicard Webhook)
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/payment/callback/
+Authentication: Not required (called by Multicard)
+Description: Internal endpoint that receives payment callbacks from Multicard
+             when a payment is completed. This endpoint verifies the signature
+             and updates the invoice status.
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON - from Multicard):
+    {
+        "store_id": 6,
+        "amount": 50000000,
+        "invoice_id": "1",
+        "billing_id": "20241214242009869794410864028760",
+        "payment_time": "2024-12-14 14:36:31",
+        "phone": "998930601725",
+        "card_pan": "860030******5959",
+        "ps": "uzcard",
+        "card_token": "6225f3c93f7a880142782fa4",
+        "uuid": "e60d8ebc-b9fe-11ef-b159-005056b4367d",
+        "receipt_url": "https://dev-checkout.multicard.uz/check/e60d8ebc-b9fe-11ef-b159-005056b4367d",
+        "sign": "553b4292b0f1d8e0e18e6daeb3af3761"
+    }
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Payment processed successfully"
+    }
+
+Error Responses:
+    400 Bad Request:
+        - Invalid callback data
+        - Invalid signature
+    404 Not Found: Invoice not found
+    500 Internal Server Error: Server error processing callback
+
+Note: This endpoint is called automatically by Multicard. It should not be
+      called manually by clients.
+
+6. PAYMENT WEBHOOK (Internal - Multicard Status Updates)
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/payment/webhook/
+Authentication: Not required (called by Multicard)
+Description: Internal endpoint that receives webhook notifications from
+             Multicard for payment status changes (draft, progress, success,
+             error, revert). This endpoint verifies the signature and updates
+             the invoice status accordingly.
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON - from Multicard):
+    {
+        "uuid": "e60d8ebc-b9fe-11ef-b159-005056b4367d",
+        "amount": 50000000,
+        "invoice_id": "1",
+        "status": "success",
+        "billing_id": "20241214242009869794410864028760",
+        "payment_time": "2024-12-14 14:36:31",
+        "refund_time": null,
+        "phone": "998930601725",
+        "card_pan": "860030******5959",
+        "ps": "uzcard",
+        "card_token": "6225f3c93f7a880142782fa4",
+        "receipt_url": null,
+        "sign": "5fe1289fbe9cf1834de72789f6629e5f23184974"
+    }
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Webhook processed successfully"
+    }
+
+Error Responses:
+    400 Bad Request:
+        - Incomplete webhook data
+        - Invalid signature
+    404 Not Found: Invoice not found
+    500 Internal Server Error: Server error processing webhook
+
+Note: This endpoint is called automatically by Multicard. It should not be
+      called manually by clients.
+
+INVOICE STATUS VALUES:
+--------------------------------------------------------------------------------
+- created: Invoice created but payment link not generated yet
+- pending: Payment link created, waiting for payment
+- paid: Payment completed successfully
+- cancelled: Invoice cancelled
+- refunded: Payment refunded
+- expired: Invoice expired
+
+AUTOMATIC INVOICE GENERATION:
+--------------------------------------------------------------------------------
+Invoices are automatically generated when:
+1. A student books a group (student.group is set)
+2. The group has a price set (price > 0)
+
+AUTOMATIC PRICE UPDATES:
+--------------------------------------------------------------------------------
+When a group's price changes:
+- Unpaid invoices (created/pending status) are automatically updated with the
+  new price
+- Paid invoices are NOT updated (amount remains as paid)
+
+================================================================================
 LAST UPDATED
 ================================================================================
 
-Date: 2026-01-11
+Date: 2026-01-12
 APIs Documented:
     - Employee Registration (POST /api/v1/auth/register/)
     - Employee Login (POST /api/v1/auth/login/)

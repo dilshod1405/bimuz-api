@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     
     'user',
     'education',
-    'payment',
+    'payment.apps.PaymentConfig',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -277,3 +277,10 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# Multicard Payment Gateway Configuration
+MULTICARD_BASE_URL = config('MULTICARD_BASE_URL', default='https://dev-mesh.multicard.uz')
+MULTICARD_APPLICATION_ID = config('MULTICARD_APPLICATION_ID', default='')
+MULTICARD_SECRET = config('MULTICARD_SECRET', default='')
+MULTICARD_STORE_ID = config('MULTICARD_STORE_ID', default=0, cast=int)
+MULTICARD_CALLBACK_URL = config('MULTICARD_CALLBACK_URL', default='')

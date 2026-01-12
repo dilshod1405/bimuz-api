@@ -997,7 +997,332 @@ notes:
   - "Booking system implements 10-day rule: Groups that started >= 10 days ago cannot accept new bookings."
 
 metadata:
-  last_updated: "2026-01-11"
+  payment_apis:
+    list_invoices:
+      method: "GET"
+      path: "/api/v1/payment/invoices/"
+      authentication_required: true
+      description: "List all invoices. Students can see only their own invoices. Staff/admin can see all invoices."
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json"
+      
+      query_parameters: []
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id: { type: "integer" }
+              student: { type: "integer" }
+              student_name: { type: "string" }
+              student_phone: { type: "string" }
+              group: { type: "integer" }
+              group_name: { type: "string" }
+              amount: { type: "string", format: "decimal" }
+              status: { type: "string", enum: ["created", "pending", "paid", "cancelled", "refunded", "expired"] }
+              status_display: { type: "string" }
+              is_paid: { type: "boolean" }
+              multicard_uuid: { type: "string", nullable: true }
+              multicard_invoice_id: { type: "string", nullable: true }
+              checkout_url: { type: "string", format: "uri", nullable: true }
+              receipt_url: { type: "string", format: "uri", nullable: true }
+              payment_time: { type: "string", format: "date-time", nullable: true }
+              payment_method: { type: "string", nullable: true }
+              card_pan: { type: "string", nullable: true }
+              notes: { type: "string", nullable: true }
+              created_at: { type: "string", format: "date-time" }
+              updated_at: { type: "string", format: "date-time" }
+      
+      error_responses:
+        - status_code: 401
+          description: "Invalid or missing authentication token"
+        - status_code: 403
+          description: "User does not have permission to view invoices"
+    
+    get_invoice_details:
+      method: "GET"
+      path: "/api/v1/payment/invoices/<id>/"
+      authentication_required: true
+      description: "Get detailed information about a specific invoice."
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json"
+      
+      url_parameters:
+        id:
+          type: "integer"
+          description: "Invoice ID"
+          required: true
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "object"
+          properties:
+            id: { type: "integer" }
+            student: { type: "integer" }
+            student_name: { type: "string" }
+            student_phone: { type: "string" }
+            group: { type: "integer" }
+            group_name: { type: "string" }
+            amount: { type: "string", format: "decimal" }
+            status: { type: "string" }
+            status_display: { type: "string" }
+            is_paid: { type: "boolean" }
+            multicard_uuid: { type: "string", nullable: true }
+            multicard_invoice_id: { type: "string", nullable: true }
+            checkout_url: { type: "string", format: "uri", nullable: true }
+            receipt_url: { type: "string", format: "uri", nullable: true }
+            payment_time: { type: "string", format: "date-time", nullable: true }
+            payment_method: { type: "string", nullable: true }
+            card_pan: { type: "string", nullable: true }
+            notes: { type: "string", nullable: true }
+            created_at: { type: "string", format: "date-time" }
+            updated_at: { type: "string", format: "date-time" }
+      
+      error_responses:
+        - status_code: 401
+          description: "Invalid or missing authentication token"
+        - status_code: 403
+          description: "User does not have permission to view this invoice"
+        - status_code: 404
+          description: "Invoice not found"
+    
+    create_payment_link:
+      method: "POST"
+      path: "/api/v1/payment/create-payment/"
+      authentication_required: true
+      description: "Create a payment link for an invoice via Multicard payment gateway."
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - invoice_id
+        optional_fields:
+          - lang
+          - return_url
+          - return_error_url
+          - send_sms
+        schema:
+          invoice_id:
+            type: "integer"
+            description: "ID of the invoice to pay"
+          lang:
+            type: "string"
+            enum: ["ru", "uz", "en"]
+            default: "uz"
+            description: "Payment page language"
+          return_url:
+            type: "string"
+            format: "uri"
+            description: "URL to redirect after successful payment"
+          return_error_url:
+            type: "string"
+            format: "uri"
+            description: "URL to redirect after payment error"
+          send_sms:
+            type: "boolean"
+            default: false
+            description: "Send invoice link via SMS to student"
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "object"
+          properties:
+            success: { type: "boolean" }
+            data:
+              type: "object"
+              properties:
+                checkout_url: { type: "string", format: "uri" }
+                short_link: { type: "string", format: "uri" }
+                deeplink: { type: "string", format: "uri" }
+                uuid: { type: "string" }
+                invoice_id: { type: "integer" }
+            message: { type: "string" }
+      
+      error_responses:
+        - status_code: 400
+          description: "Invoice is already paid, cancelled, or failed to create payment link"
+        - status_code: 401
+          description: "Invalid or missing authentication token"
+        - status_code: 403
+          description: "User does not have permission to pay this invoice"
+        - status_code: 404
+          description: "Invoice not found"
+        - status_code: 500
+          description: "Server error during payment link creation"
+    
+    check_invoice_status:
+      method: "GET"
+      path: "/api/v1/payment/check-status/"
+      authentication_required: true
+      description: "Check the current payment status of an invoice from Multicard."
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json"
+      
+      query_parameters:
+        invoice_id:
+          type: "integer"
+          required: true
+          description: "Invoice ID to check"
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "object"
+          properties:
+            success: { type: "boolean" }
+            data:
+              type: "object"
+              properties:
+                invoice_id: { type: "integer" }
+                status: { type: "string" }
+                multicard_status: { type: "string" }
+                checkout_url: { type: "string", format: "uri", nullable: true }
+                receipt_url: { type: "string", format: "uri", nullable: true }
+                payment_time: { type: "string", format: "date-time", nullable: true }
+      
+      error_responses:
+        - status_code: 400
+          description: "invoice_id parameter is required or failed to get status"
+        - status_code: 401
+          description: "Invalid or missing authentication token"
+        - status_code: 403
+          description: "User does not have permission to view this invoice"
+        - status_code: 404
+          description: "Invoice not found"
+    
+    payment_callback:
+      method: "POST"
+      path: "/api/v1/payment/callback/"
+      authentication_required: false
+      description: "Internal endpoint that receives payment callbacks from Multicard. Called automatically by Multicard."
+      
+      headers:
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - store_id
+          - amount
+          - invoice_id
+          - billing_id
+          - payment_time
+          - uuid
+          - sign
+        schema:
+          store_id: { type: "integer" }
+          amount: { type: "integer", description: "Amount in tiyins" }
+          invoice_id: { type: "string" }
+          billing_id: { type: "string" }
+          payment_time: { type: "string" }
+          phone: { type: "string", nullable: true }
+          card_pan: { type: "string", nullable: true }
+          ps: { type: "string", nullable: true }
+          card_token: { type: "string", nullable: true }
+          uuid: { type: "string" }
+          receipt_url: { type: "string", format: "uri", nullable: true }
+          sign: { type: "string", description: "MD5 signature for verification" }
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "object"
+          properties:
+            success: { type: "boolean" }
+            message: { type: "string" }
+      
+      error_responses:
+        - status_code: 400
+          description: "Invalid callback data or signature"
+        - status_code: 404
+          description: "Invoice not found"
+        - status_code: 500
+          description: "Server error processing callback"
+      
+      note: "This endpoint is called automatically by Multicard. It should not be called manually by clients."
+    
+    payment_webhook:
+      method: "POST"
+      path: "/api/v1/payment/webhook/"
+      authentication_required: false
+      description: "Internal endpoint that receives webhook notifications from Multicard for payment status changes."
+      
+      headers:
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - uuid
+          - amount
+          - invoice_id
+          - status
+          - billing_id
+          - payment_time
+          - sign
+        schema:
+          uuid: { type: "string" }
+          amount: { type: "integer", description: "Amount in tiyins" }
+          invoice_id: { type: "string" }
+          status: { type: "string", enum: ["draft", "progress", "success", "error", "revert", "hold"] }
+          billing_id: { type: "string" }
+          payment_time: { type: "string" }
+          refund_time: { type: "string", nullable: true }
+          phone: { type: "string", nullable: true }
+          card_pan: { type: "string", nullable: true }
+          ps: { type: "string", nullable: true }
+          card_token: { type: "string", nullable: true }
+          receipt_url: { type: "string", format: "uri", nullable: true }
+          sign: { type: "string", description: "SHA1 signature for verification" }
+      
+      success_response:
+        status_code: 200
+        schema:
+          type: "object"
+          properties:
+            success: { type: "boolean" }
+            message: { type: "string" }
+      
+      error_responses:
+        - status_code: 400
+          description: "Incomplete webhook data or invalid signature"
+        - status_code: 404
+          description: "Invoice not found"
+        - status_code: 500
+          description: "Server error processing webhook"
+      
+      note: "This endpoint is called automatically by Multicard. It should not be called manually by clients."
+    
+    invoice_status_values:
+      - "created: Invoice created but payment link not generated yet"
+      - "pending: Payment link created, waiting for payment"
+      - "paid: Payment completed successfully"
+      - "cancelled: Invoice cancelled"
+      - "refunded: Payment refunded"
+      - "expired: Invoice expired"
+    
+    automatic_invoice_generation:
+      description: "Invoices are automatically generated when a student books a group (student.group is set) and the group has a price set (price > 0)."
+    
+    automatic_price_updates:
+      description: "When a group's price changes, unpaid invoices (created/pending status) are automatically updated with the new price. Paid invoices are NOT updated (amount remains as paid)."
+
+  last_updated: "2026-01-12"
   apis_documented:
     - "Employee Registration (POST /api/v1/auth/register/)"
     - "Employee Login (POST /api/v1/auth/login/)"
@@ -1020,4 +1345,10 @@ metadata:
     - "Booking - List Groups (GET /api/v1/education/booking/groups/)"
     - "Booking - Book Student (POST /api/v1/education/booking/book/)"
     - "Booking - Cancel Booking (POST /api/v1/education/booking/cancel/)"
+    - "Payment - List Invoices (GET /api/v1/payment/invoices/)"
+    - "Payment - Get Invoice Details (GET /api/v1/payment/invoices/<id>/)"
+    - "Payment - Create Payment Link (POST /api/v1/payment/create-payment/)"
+    - "Payment - Check Invoice Status (GET /api/v1/payment/check-status/)"
+    - "Payment - Callback (POST /api/v1/payment/callback/) - Internal"
+    - "Payment - Webhook (POST /api/v1/payment/webhook/) - Internal"
   documentation_version: "1.0"

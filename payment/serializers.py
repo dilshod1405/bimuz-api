@@ -1,0 +1,80 @@
+from rest_framework import serializers
+from payment.models import Invoice, InvoiceStatus
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    """Serializer for Invoice model"""
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    student_phone = serializers.CharField(source='student.phone', read_only=True)
+    group_name = serializers.CharField(source='group.__str__', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    is_paid = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'id',
+            'student',
+            'student_name',
+            'student_phone',
+            'group',
+            'group_name',
+            'amount',
+            'status',
+            'status_display',
+            'is_paid',
+            'multicard_uuid',
+            'multicard_invoice_id',
+            'checkout_url',
+            'receipt_url',
+            'payment_time',
+            'payment_method',
+            'card_pan',
+            'notes',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id',
+            'multicard_uuid',
+            'multicard_invoice_id',
+            'checkout_url',
+            'receipt_url',
+            'payment_time',
+            'payment_method',
+            'card_pan',
+            'created_at',
+            'updated_at'
+        ]
+
+
+class CreatePaymentSerializer(serializers.Serializer):
+    """Serializer for creating payment link"""
+    invoice_id = serializers.IntegerField(help_text='Invoice ID to pay')
+    return_url = serializers.URLField(required=False, help_text='URL to redirect after payment')
+    return_error_url = serializers.URLField(required=False, help_text='URL to redirect after error')
+    lang = serializers.ChoiceField(
+        choices=['ru', 'uz', 'en'],
+        default='uz',
+        help_text='Payment page language'
+    )
+    send_sms = serializers.BooleanField(
+        default=False,
+        help_text='Send invoice link via SMS to student'
+    )
+
+
+class PaymentCallbackSerializer(serializers.Serializer):
+    """Serializer for Multicard payment callback"""
+    store_id = serializers.IntegerField()
+    amount = serializers.IntegerField()
+    invoice_id = serializers.CharField()
+    billing_id = serializers.CharField()
+    payment_time = serializers.CharField()
+    phone = serializers.CharField(required=False, allow_blank=True)
+    card_pan = serializers.CharField(required=False, allow_blank=True)
+    ps = serializers.CharField(required=False, allow_blank=True)
+    card_token = serializers.CharField(required=False, allow_blank=True)
+    uuid = serializers.CharField()
+    receipt_url = serializers.URLField(required=False, allow_blank=True)
+    sign = serializers.CharField()

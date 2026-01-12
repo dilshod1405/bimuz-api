@@ -47,6 +47,13 @@ class Group(BaseModel):
     seats = models.PositiveIntegerField(
         verbose_name='Maximum Students'
     )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Price',
+        help_text='Group price in UZS (sum)',
+        default=0.00
+    )
     mentor = models.ForeignKey(  # type: ignore
         'user.Employee',
         on_delete=models.SET_NULL,

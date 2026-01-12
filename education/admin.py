@@ -11,7 +11,7 @@ from user.models import Speciality, Employee
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
     
-    list_display = ('id', 'get_speciality_display', 'get_dates_display', 'time', 'starting_date', 'get_status_display', 'seats', 'current_students_count_display', 'available_seats_display', 'mentor_link', 'created_at')
+    list_display = ('id', 'get_speciality_display', 'get_dates_display', 'time', 'starting_date', 'get_status_display', 'price_display', 'seats', 'current_students_count_display', 'available_seats_display', 'mentor_link', 'created_at')
     list_filter = ('speciality_id', 'dates', 'starting_date', 'time', 'created_at', 'mentor__role')
     search_fields = ('speciality_id', 'mentor__full_name', 'mentor__user__email', 'mentor__user__first_name', 'mentor__user__last_name')
     readonly_fields = ('created_at', 'updated_at', 'current_students_count_display', 'available_seats_display', 'students_list', 'mentor_link', 'get_status_display')
@@ -21,7 +21,7 @@ class GroupAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Group Information'), {
-            'fields': ('speciality_id', 'dates', 'time', 'seats', 'starting_date')
+            'fields': ('speciality_id', 'dates', 'time', 'seats', 'price', 'starting_date')
         }),
         (_('Mentor Assignment'), {
             'fields': ('mentor', 'mentor_link')
@@ -55,6 +55,15 @@ class GroupAdmin(admin.ModelAdmin):
             return ''
         return str(obj.current_students_count)
     current_students_count_display.short_description = 'Current Students'
+    
+    def price_display(self, obj):
+        """Display price with currency formatting."""
+        if not obj:
+            return ''
+        formatted_price = f"{obj.price:,.2f}"
+        return format_html('<strong>{} UZS</strong>', formatted_price)
+    price_display.short_description = 'Price'
+    price_display.admin_order_field = 'price'
     
     def get_speciality_display(self, obj):
         if not obj:
