@@ -376,6 +376,355 @@ Note: Some endpoints may return Django REST Framework's default error format
       for certain error types (e.g., 401 Unauthorized).
 
 ================================================================================
+TALABA AUTENTIFIKATSIYA APIs
+================================================================================
+
+1. TALABA RO'YXATDAN O'TISH
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/students/register/
+Authentication: Not required
+Description: Talaba ro'yxatdan o'tkazish va shartnoma PDF yaratish
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "email": "student@example.com",
+        "password": "SecurePassword123!",
+        "password_confirm": "SecurePassword123!",
+        "full_name": "Ali Valiyev",
+        "phone": "+998901234567",
+        "passport_serial_number": "AB1234567",
+        "birth_date": "2000-01-15",
+        "source": "instagram"
+    }
+
+Required Fields:
+    - email: Valid email address (unique)
+    - password: String, must pass Django password validators
+    - password_confirm: Must match password
+    - full_name: String, max 255 characters
+    - phone: String, format: '+999999999', max 13 digits, unique
+    - passport_serial_number: String, max 20 characters, unique
+    - birth_date: Date in format YYYY-MM-DD
+    - source: One of: "instagram", "facebook", "telegram"
+
+Success Response (201 Created):
+    {
+        "success": true,
+        "message": "Talaba muvaffaqiyatli ro'yxatdan o'tdi. Shartnoma yaratildi.",
+        "data": {
+            "student": {
+                "id": 1,
+                "email": "student@example.com",
+                "first_name": "Ali",
+                "last_name": "Valiyev",
+                "full_name": "Ali Valiyev",
+                "phone": "+998901234567",
+                "passport_serial_number": "AB1234567",
+                "birth_date": "2000-01-15",
+                "source": "instagram",
+                "source_display": "Instagram",
+                "group": null,
+                "certificate": null,
+                "contract": "/media/contracts/contract_1_20260110.pdf",
+                "contract_url": "http://localhost:8000/media/contracts/contract_1_20260110.pdf",
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            },
+            "tokens": {
+                "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "email": ["Bu email bilan foydalanuvchi allaqachon mavjud."],
+                "phone": ["Bu telefon raqami allaqachon ro'yxatdan o'tgan."],
+                "passport_serial_number": ["Bu passport seriya raqami allaqachon ro'yxatdan o'tgan."],
+                "password_confirm": ["Parollar mos kelmaydi."]
+            }
+        }
+
+Validation Rules:
+    - Email must be unique across all users
+    - Phone must be unique
+    - Passport serial number must be unique
+    - Password must meet Django's password validation requirements
+    - Password and password_confirm must match
+
+Note: 
+    - Ro'yxatdan o'tganda avtomatik ravishda shartnoma PDF fayli yaratiladi va talaba profili bilan bog'lanadi.
+    - Ro'yxatdan o'tgandan keyin 6 raqamli tasdiqlash kodi SMS orqali yuboriladi.
+    - Kod 2 daqiqa (yoki sozlangan vaqt) davomida amal qiladi.
+    - Test akkauntlar uchun kod API javobida ham qaytarilishi mumkin (verification_code maydoni).
+
+2. TALABA KIRISH
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/students/login/
+Authentication: Not required
+Description: Talabani autentifikatsiya qilish va JWT tokenlarni olish
+
+Request Headers:
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "email": "student@example.com",
+        "password": "SecurePassword123!"
+    }
+
+Required Fields:
+    - email: Valid email address of registered student
+    - password: Student's password
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Kirish muvaffaqiyatli.",
+        "data": {
+            "student": {
+                "id": 1,
+                "email": "student@example.com",
+                "first_name": "Ali",
+                "last_name": "Valiyev",
+                "full_name": "Ali Valiyev",
+                "phone": "+998901234567",
+                "passport_serial_number": "AB1234567",
+                "birth_date": "2000-01-15",
+                "source": "instagram",
+                "source_display": "Instagram",
+                "group": null,
+                "certificate": null,
+                "contract": "/media/contracts/contract_1_20260110.pdf",
+                "contract_url": "http://localhost:8000/media/contracts/contract_1_20260110.pdf",
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            },
+            "tokens": {
+                "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            }
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Invalid credentials
+        {
+            "success": false,
+            "message": "Validation error",
+            "errors": {
+                "email": ["Noto'g'ri email yoki parol."]
+            }
+        }
+
+3. TALABA PROFILINI OLISH
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/auth/students/profile/
+Authentication: Required (JWT Bearer Token)
+Description: Autentifikatsiya qilingan talabaning profil ma'lumotlarini olish
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Talaba profili muvaffaqiyatli yuklandi.",
+        "data": {
+            "id": 1,
+            "email": "student@example.com",
+            "first_name": "Ali",
+            "last_name": "Valiyev",
+            "full_name": "Ali Valiyev",
+            "phone": "+998901234567",
+            "passport_serial_number": "AB1234567",
+            "birth_date": "2000-01-15",
+            "source": "instagram",
+            "source_display": "Instagram",
+            "group": null,
+            "certificate": null,
+            "contract": "/media/contracts/contract_1_20260110.pdf",
+            "contract_url": "http://localhost:8000/media/contracts/contract_1_20260110.pdf",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 401 Unauthorized: Authentication required
+    - 404 Not Found: Student profile not found
+
+4. TALABA PROFILINI YANGILASH
+--------------------------------------------------------------------------------
+Endpoint: PATCH /api/v1/auth/students/profile/
+Authentication: Required (JWT Bearer Token)
+Description: Autentifikatsiya qilingan talabaning profilini yangilash (qisman yangilash mumkin)
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json (or multipart/form-data for file uploads)
+
+Request Body (JSON):
+    {
+        "full_name": "Ali Valiyev O'g'li",
+        "phone": "+998901234568"
+    }
+
+Allowed Fields for Update:
+    - full_name: String, max 255 characters
+    - phone: String, format: '+999999999', max 13 digits, unique
+    - certificate: File (upload via multipart/form-data)
+
+Note: Email, passport_serial_number, birth_date, source cannot be updated after registration.
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Talaba profili muvaffaqiyatli yangilandi.",
+        "data": {
+            "id": 1,
+            "email": "student@example.com",
+            "first_name": "Ali",
+            "last_name": "Valiyev",
+            "full_name": "Ali Valiyev O'g'li",
+            "phone": "+998901234568",
+            "passport_serial_number": "AB1234567",
+            "birth_date": "2000-01-15",
+            "source": "instagram",
+            "source_display": "Instagram",
+            "group": null,
+            "certificate": null,
+            "contract": "/media/contracts/contract_1_20260110.pdf",
+            "contract_url": "http://localhost:8000/media/contracts/contract_1_20260110.pdf",
+            "created_at": "2026-01-10T12:00:00Z",
+            "updated_at": "2026-01-10T12:00:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Validation errors
+    - 401 Unauthorized: Authentication required
+    - 404 Not Found: Student profile not found
+
+5. SHARTNOMANI TASDIQLASH (VERIFY CONTRACT)
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/students/verify-contract/
+Authentication: Required (JWT Bearer Token)
+Description: Shartnomani elektron imzo bilan tasdiqlash uchun SMS orqali yuborilgan kodni tekshirish
+
+Request Headers:
+    Authorization: Bearer <access_token>
+    Content-Type: application/json
+
+Request Body (JSON):
+    {
+        "verification_code": "123456"
+    }
+
+Required Fields:
+    - verification_code: String, exactly 6 digits (0-9)
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Shartnoma muvaffaqiyatli tasdiqlandi.",
+        "data": {
+            "student": {
+                "id": 1,
+                "email": "student@example.com",
+                "first_name": "Ali",
+                "last_name": "Valiyev",
+                "full_name": "Ali Valiyev",
+                "phone": "+998901234567",
+                "passport_serial_number": "AB1234567",
+                "birth_date": "2000-01-15",
+                "source": "instagram",
+                "source_display": "Instagram",
+                "group": null,
+                "certificate": null,
+                "contract": "/media/contracts/contract_1_20260110.pdf",
+                "contract_url": "http://localhost:8000/media/contracts/contract_1_20260110.pdf",
+                "contract_signed": true,
+                "created_at": "2026-01-10T12:00:00Z",
+                "updated_at": "2026-01-10T12:00:00Z"
+            },
+            "contract_signed": true
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Invalid code, expired code, or contract already signed
+        {
+            "success": false,
+            "message": "Noto'g'ri tasdiqlash kodi."
+        }
+        OR
+        {
+            "success": false,
+            "message": "Tasdiqlash kodi muddati tugagan. Iltimos, yangi kod so'rang."
+        }
+        OR
+        {
+            "success": false,
+            "message": "Shartnoma allaqachon tasdiqlangan."
+        }
+    - 401 Unauthorized: Authentication required
+    - 404 Not Found: Student profile not found
+
+Note: 
+    - Kod faqat 2 daqiqa (yoki sozlangan vaqt) davomida amal qiladi
+    - Kod tasdiqlangandan keyin o'chiriladi va qayta ishlatib bo'lmaydi
+    - Shartnoma bir marta tasdiqlanishi mumkin
+
+6. TASDIQLASH KODINI QAYTA YUBORISH (RESEND VERIFICATION CODE)
+--------------------------------------------------------------------------------
+Endpoint: POST /api/v1/auth/students/resend-code/
+Authentication: Required (JWT Bearer Token)
+Description: Shartnomani tasdiqlash uchun yangi kod yuborish
+
+Request Headers:
+    Authorization: Bearer <access_token>
+
+Note: No request body required. The endpoint uses the authenticated student's phone number.
+
+Success Response (200 OK):
+    {
+        "success": true,
+        "message": "Yangi tasdiqlash kodi muvaffaqiyatli yuborildi.",
+        "data": {
+            "message": "Yangi tasdiqlash kodi SMS orqali yuborildi.",
+            "expires_at": "2026-01-10T12:02:00Z"
+        }
+    }
+
+Error Responses:
+    - 400 Bad Request: Contract already signed
+        {
+            "success": false,
+            "message": "Shartnoma allaqachon tasdiqlangan."
+        }
+    - 401 Unauthorized: Authentication required
+    - 404 Not Found: Student profile not found
+    - 500 Internal Server Error: SMS sending failed
+        {
+            "success": false,
+            "message": "SMS yuborishda xatolik yuz berdi: <error_message>"
+        }
+
+Note:
+    - Yangi kod avvalgi kodni bekor qiladi
+    - Kod SMS orqali talabaning telefon raqamiga yuboriladi
+    - Test akkauntlar uchun kod API javobida ham qaytarilishi mumkin
+
+================================================================================
 ================================================================================
 EMPLOYEE MANAGEMENT APIs (Developer or Administrator)
 ================================================================================

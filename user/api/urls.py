@@ -9,6 +9,13 @@ from user.api.employee_views import (
     EmployeeListView,
     EmployeeRetrieveUpdateView
 )
+from user.api.student_views import (
+    StudentRegistrationView,
+    StudentLoginView,
+    StudentProfileView,
+    ContractVerificationView,
+    ResendVerificationCodeView
+)
 
 app_name = 'user_api'
 
@@ -20,4 +27,10 @@ urlpatterns = [
     
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
     path('employees/<int:pk>/', EmployeeRetrieveUpdateView.as_view(), name='employee-retrieve-update'),
+    
+    path('students/register/', StudentRegistrationView.as_view(), name='student-register'),
+    path('students/login/', StudentLoginView.as_view(), name='student-login'),
+    path('students/profile/', StudentProfileView.as_view(), name='student-profile'),
+    path('students/verify-contract/', ContractVerificationView.as_view(), name='student-verify-contract'),
+    path('students/resend-code/', ResendVerificationCodeView.as_view(), name='student-resend-code'),
 ]

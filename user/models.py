@@ -129,6 +129,14 @@ class Student(BaseModel):
         message="Telefon raqami '+999999999' formatida kiritilishi kerak. Maksimal 13 raqam."
     )
     
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='student_profile',
+        null=True,
+        blank=True,
+        verbose_name='User'
+    )
     full_name = models.CharField(max_length=255, verbose_name='Full Name')
     phone = models.CharField(
         validators=[phone_regex],
@@ -160,6 +168,17 @@ class Student(BaseModel):
         null=True,
         blank=True,
         verbose_name='Certificate'
+    )
+    contract = models.FileField(
+        upload_to='contracts/',
+        null=True,
+        blank=True,
+        verbose_name='Contract PDF'
+    )
+    contract_signed = models.BooleanField(
+        default=False,
+        verbose_name='Contract Signed',
+        help_text='Whether the contract has been electronically signed'
     )
 
     class Meta:  # type: ignore

@@ -413,6 +413,425 @@ endpoints:
             detail: "Token is invalid or expired"
             code: "token_not_valid"
 
+  student_authentication:
+    registration:
+      method: "POST"
+      path: "/api/v1/auth/students/register/"
+      authentication_required: false
+      description: "Talaba ro'yxatdan o'tkazish va shartnoma PDF yaratish"
+      
+      headers:
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - email
+          - password
+          - password_confirm
+          - full_name
+          - phone
+          - passport_serial_number
+          - birth_date
+          - source
+        schema:
+          email:
+            type: "string"
+            format: "email"
+            unique: true
+            description: "Valid email address (unique)"
+          password:
+            type: "string"
+            write_only: true
+            description: "Password (must pass Django password validators)"
+          password_confirm:
+            type: "string"
+            write_only: true
+            description: "Password confirmation (must match password)"
+          full_name:
+            type: "string"
+            max_length: 255
+            description: "Student's full name"
+          phone:
+            type: "string"
+            max_length: 17
+            pattern: "^\\+?1?\\d{9,13}$"
+            unique: true
+            description: "Phone number in format '+999999999', max 13 digits"
+          passport_serial_number:
+            type: "string"
+            max_length: 20
+            unique: true
+            description: "Passport serial number"
+          birth_date:
+            type: "string"
+            format: "date"
+            description: "Birth date in format YYYY-MM-DD"
+          source:
+            type: "string"
+            enum: ["instagram", "facebook", "telegram"]
+            description: "Source of information about the course"
+      
+      example_request:
+        email: "student@example.com"
+        password: "SecurePassword123!"
+        password_confirm: "SecurePassword123!"
+        full_name: "Ali Valiyev"
+        phone: "+998901234567"
+        passport_serial_number: "AB1234567"
+        birth_date: "2000-01-15"
+        source: "instagram"
+      
+      success_response:
+        status_code: 201
+        description: "Talaba muvaffaqiyatli ro'yxatdan o'tdi. Shartnoma yaratildi. Tasdiqlash kodi SMS orqali yuborildi."
+        schema:
+          success: true
+          message: "Talaba muvaffaqiyatli ro'yxatdan o'tdi. Shartnoma yaratildi. Tasdiqlash kodi SMS orqali yuborildi."
+          data:
+            student:
+              id: 1
+              email: "student@example.com"
+              first_name: "Ali"
+              last_name: "Valiyev"
+              full_name: "Ali Valiyev"
+              phone: "+998901234567"
+              passport_serial_number: "AB1234567"
+              birth_date: "2000-01-15"
+              source: "instagram"
+              source_display: "Instagram"
+              group: null
+              certificate: null
+              contract: "/media/contracts/contract_1_20260110.pdf"
+              contract_url: "http://localhost:8000/media/contracts/contract_1_20260110.pdf"
+              contract_signed: false
+              created_at: "2026-01-10T12:00:00Z"
+              updated_at: "2026-01-10T12:00:00Z"
+            tokens:
+              refresh: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+              access: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            sms_sent: true
+            verification_code: "123456"  # Only included if SMS sending failed or for test accounts
+      
+      error_responses:
+        - status_code: 400
+          description: "Validation errors"
+          schema:
+            success: false
+            message: "Validation error"
+            errors:
+              email: ["Bu email bilan foydalanuvchi allaqachon mavjud."]
+              phone: ["Bu telefon raqami allaqachon ro'yxatdan o'tgan."]
+              passport_serial_number: ["Bu passport seriya raqami allaqachon ro'yxatdan o'tgan."]
+              password_confirm: ["Parollar mos kelmaydi."]
+      
+      validation_rules:
+        - "Email must be unique across all users"
+        - "Phone must be unique"
+        - "Passport serial number must be unique"
+        - "Password must meet Django's password validation requirements"
+        - "Password and password_confirm must match"
+        - "Contract PDF is automatically generated upon registration"
+      
+      notes:
+        - "Ro'yxatdan o'tganda avtomatik ravishda shartnoma PDF fayli yaratiladi va talaba profili bilan bog'lanadi"
+        - "Ro'yxatdan o'tgandan keyin 6 raqamli tasdiqlash kodi SMS orqali yuboriladi"
+        - "Kod 2 daqiqa (yoki sozlangan vaqt) davomida amal qiladi"
+        - "Test akkauntlar uchun kod API javobida ham qaytarilishi mumkin (verification_code maydoni)"
+
+    login:
+      method: "POST"
+      path: "/api/v1/auth/students/login/"
+      authentication_required: false
+      description: "Talabani autentifikatsiya qilish va JWT tokenlarni olish"
+      
+      headers:
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - email
+          - password
+        schema:
+          email:
+            type: "string"
+            format: "email"
+            description: "Student's email address"
+          password:
+            type: "string"
+            write_only: true
+            description: "Student's password"
+      
+      example_request:
+        email: "student@example.com"
+        password: "SecurePassword123!"
+      
+      success_response:
+        status_code: 200
+        description: "Kirish muvaffaqiyatli."
+        schema:
+          success: true
+          message: "Kirish muvaffaqiyatli."
+          data:
+            student:
+              id: 1
+              email: "student@example.com"
+              first_name: "Ali"
+              last_name: "Valiyev"
+              full_name: "Ali Valiyev"
+              phone: "+998901234567"
+              passport_serial_number: "AB1234567"
+              birth_date: "2000-01-15"
+              source: "instagram"
+              source_display: "Instagram"
+              group: null
+              certificate: null
+              contract: "/media/contracts/contract_1_20260110.pdf"
+              contract_url: "http://localhost:8000/media/contracts/contract_1_20260110.pdf"
+              created_at: "2026-01-10T12:00:00Z"
+              updated_at: "2026-01-10T12:00:00Z"
+            tokens:
+              refresh: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+              access: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+      
+      error_responses:
+        - status_code: 400
+          description: "Invalid credentials"
+          schema:
+            success: false
+            message: "Validation error"
+            errors:
+              email: ["Noto'g'ri email yoki parol."]
+
+    get_profile:
+      method: "GET"
+      path: "/api/v1/auth/students/profile/"
+      authentication_required: true
+      description: "Autentifikatsiya qilingan talabaning profil ma'lumotlarini olish"
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+      
+      success_response:
+        status_code: 200
+        description: "Talaba profili muvaffaqiyatli yuklandi."
+        schema:
+          success: true
+          message: "Talaba profili muvaffaqiyatli yuklandi."
+          data:
+            id: 1
+            email: "student@example.com"
+            first_name: "Ali"
+            last_name: "Valiyev"
+            full_name: "Ali Valiyev"
+            phone: "+998901234567"
+            passport_serial_number: "AB1234567"
+            birth_date: "2000-01-15"
+            source: "instagram"
+            source_display: "Instagram"
+            group: null
+            certificate: null
+            contract: "/media/contracts/contract_1_20260110.pdf"
+            contract_url: "http://localhost:8000/media/contracts/contract_1_20260110.pdf"
+            created_at: "2026-01-10T12:00:00Z"
+            updated_at: "2026-01-10T12:00:00Z"
+      
+      error_responses:
+        - status_code: 401
+          description: "Authentication required"
+        - status_code: 404
+          description: "Student profile not found"
+
+    update_profile:
+      method: "PATCH"
+      path: "/api/v1/auth/students/profile/"
+      authentication_required: true
+      description: "Autentifikatsiya qilingan talabaning profilini yangilash (qisman yangilash mumkin)"
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json (or multipart/form-data for file uploads)"
+      
+      request_body:
+        type: "object"
+        optional_fields:
+          - full_name
+          - phone
+          - certificate
+        schema:
+          full_name:
+            type: "string"
+            max_length: 255
+            description: "Student's full name"
+          phone:
+            type: "string"
+            max_length: 17
+            pattern: "^\\+?1?\\d{9,13}$"
+            unique: true
+            description: "Phone number in format '+999999999', max 13 digits"
+          certificate:
+            type: "file"
+            description: "Certificate file (upload via multipart/form-data)"
+      
+      example_request:
+        full_name: "Ali Valiyev O'g'li"
+        phone: "+998901234568"
+      
+      success_response:
+        status_code: 200
+        description: "Talaba profili muvaffaqiyatli yangilandi."
+        schema:
+          success: true
+          message: "Talaba profili muvaffaqiyatli yangilandi."
+          data:
+            id: 1
+            email: "student@example.com"
+            first_name: "Ali"
+            last_name: "Valiyev"
+            full_name: "Ali Valiyev O'g'li"
+            phone: "+998901234568"
+            passport_serial_number: "AB1234567"
+            birth_date: "2000-01-15"
+            source: "instagram"
+            source_display: "Instagram"
+            group: null
+            certificate: null
+            contract: "/media/contracts/contract_1_20260110.pdf"
+            contract_url: "http://localhost:8000/media/contracts/contract_1_20260110.pdf"
+            created_at: "2026-01-10T12:00:00Z"
+            updated_at: "2026-01-10T12:00:00Z"
+      
+      error_responses:
+        - status_code: 400
+          description: "Validation errors"
+        - status_code: 401
+          description: "Authentication required"
+        - status_code: 404
+          description: "Student profile not found"
+      
+      note: "Email, passport_serial_number, birth_date, source cannot be updated after registration"
+
+    verify_contract:
+      method: "POST"
+      path: "/api/v1/auth/students/verify-contract/"
+      authentication_required: true
+      description: "Shartnomani elektron imzo bilan tasdiqlash uchun SMS orqali yuborilgan kodni tekshirish"
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+        Content-Type: "application/json"
+      
+      request_body:
+        type: "object"
+        required_fields:
+          - verification_code
+        schema:
+          verification_code:
+            type: "string"
+            min_length: 6
+            max_length: 6
+            pattern: "^[0-9]{6}$"
+            description: "6-digit verification code sent via SMS"
+      
+      example_request:
+        verification_code: "123456"
+      
+      success_response:
+        status_code: 200
+        description: "Shartnoma muvaffaqiyatli tasdiqlandi."
+        schema:
+          success: true
+          message: "Shartnoma muvaffaqiyatli tasdiqlandi."
+          data:
+            student:
+              id: 1
+              email: "student@example.com"
+              first_name: "Ali"
+              last_name: "Valiyev"
+              full_name: "Ali Valiyev"
+              phone: "+998901234567"
+              passport_serial_number: "AB1234567"
+              birth_date: "2000-01-15"
+              source: "instagram"
+              source_display: "Instagram"
+              group: null
+              certificate: null
+              contract: "/media/contracts/contract_1_20260110.pdf"
+              contract_url: "http://localhost:8000/media/contracts/contract_1_20260110.pdf"
+              contract_signed: true
+              created_at: "2026-01-10T12:00:00Z"
+              updated_at: "2026-01-10T12:00:00Z"
+            contract_signed: true
+      
+      error_responses:
+        - status_code: 400
+          description: "Invalid verification code"
+          schema:
+            success: false
+            message: "Noto'g'ri tasdiqlash kodi."
+        - status_code: 400
+          description: "Verification code expired"
+          schema:
+            success: false
+            message: "Tasdiqlash kodi muddati tugagan. Iltimos, yangi kod so'rang."
+        - status_code: 400
+          description: "Contract already signed"
+          schema:
+            success: false
+            message: "Shartnoma allaqachon tasdiqlangan."
+        - status_code: 401
+          description: "Authentication required"
+        - status_code: 404
+          description: "Student profile not found"
+      
+      notes:
+        - "Kod faqat 2 daqiqa (yoki sozlangan vaqt) davomida amal qiladi"
+        - "Kod tasdiqlangandan keyin o'chiriladi va qayta ishlatib bo'lmaydi"
+        - "Shartnoma bir marta tasdiqlanishi mumkin"
+
+    resend_verification_code:
+      method: "POST"
+      path: "/api/v1/auth/students/resend-code/"
+      authentication_required: true
+      description: "Shartnomani tasdiqlash uchun yangi kod yuborish"
+      
+      headers:
+        Authorization: "Bearer <access_token>"
+      
+      note: "No request body required. The endpoint uses the authenticated student's phone number."
+      
+      success_response:
+        status_code: 200
+        description: "Yangi tasdiqlash kodi muvaffaqiyatli yuborildi."
+        schema:
+          success: true
+          message: "Yangi tasdiqlash kodi muvaffaqiyatli yuborildi."
+          data:
+            message: "Yangi tasdiqlash kodi SMS orqali yuborildi."
+            expires_at: "2026-01-10T12:02:00Z"
+      
+      error_responses:
+        - status_code: 400
+          description: "Contract already signed"
+          schema:
+            success: false
+            message: "Shartnoma allaqachon tasdiqlangan."
+        - status_code: 401
+          description: "Authentication required"
+        - status_code: 404
+          description: "Student profile not found"
+        - status_code: 500
+          description: "SMS sending failed"
+          schema:
+            success: false
+            message: "SMS yuborishda xatolik yuz berdi: <error_message>"
+      
+      notes:
+        - "Yangi kod avvalgi kodni bekor qiladi"
+        - "Kod SMS orqali talabaning telefon raqamiga yuboriladi"
+        - "Test akkauntlar uchun kod API javobida ham qaytarilishi mumkin"
+
 enums:
   employee_roles:
     description: "Employee Roles"

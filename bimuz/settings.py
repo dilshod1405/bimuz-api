@@ -247,3 +247,33 @@ REDOC_SETTINGS = {
     'EXPAND_RESPONSES': '200,201',
     'PATH_IN_MIDDLE': True,
 }
+
+# Eskiz SMS Gateway Settings
+ESKIZ_BASE_URL = config('ESKIZ_BASE_URL', default='https://notify.eskiz.uz/api')
+ESKIZ_EMAIL = config('ESKIZ_EMAIL', default='')
+ESKIZ_PASSWORD = config('ESKIZ_PASSWORD', default='')
+ESKIZ_SENDER = config('ESKIZ_SENDER', default='4546')
+ESKIZ_TEST_MESSAGE = config('ESKIZ_TEST_MESSAGE', default='This is test from Eskiz')
+
+# Verification code settings
+VERIFICATION_CODE_EXPIRY_MINUTES = config('VERIFICATION_CODE_EXPIRY_MINUTES', default=2, cast=int)
+
+# Redis Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+    }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1

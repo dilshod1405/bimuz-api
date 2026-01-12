@@ -184,6 +184,294 @@
 			"description": "Authentication endpoints for employee registration, login, and token management."
 		},
 		{
+			"name": "Student Authentication",
+			"item": [
+				{
+					"name": "Student Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set('student_access_token', response.data.tokens.access);",
+									"        pm.environment.set('student_refresh_token', response.data.tokens.refresh);",
+									"        pm.environment.set('student_id', response.data.student.id);",
+									"        console.log('✓ Tokens saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"student@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"password_confirm\": \"SecurePassword123!\",\n    \"full_name\": \"Ali Valiyev\",\n    \"phone\": \"+998901234567\",\n    \"passport_serial_number\": \"AB1234567\",\n    \"birth_date\": \"2000-01-15\",\n    \"source\": \"instagram\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/register/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"register",
+								""
+							]
+						},
+						"description": "Talaba ro'yxatdan o'tkazish va shartnoma PDF yaratish.\n\n**Required Fields:**\n- email: Valid email address (unique)\n- password: String (min 8 chars, strong validation)\n- password_confirm: String (must match password)\n- full_name: String, max 255 characters\n- phone: String, format '+999999999', max 13 digits, unique\n- passport_serial_number: String, max 20 characters, unique\n- birth_date: Date in format YYYY-MM-DD\n- source: Choice from: 'instagram', 'facebook', 'telegram'\n\n**Response:**\n- Returns student profile, contract PDF URL, and JWT tokens (access + refresh)\n- Contract PDF is automatically generated and saved\n- Tokens are automatically saved to environment variables"
+					},
+					"response": []
+				},
+				{
+					"name": "Student Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set('student_access_token', response.data.tokens.access);",
+									"        pm.environment.set('student_refresh_token', response.data.tokens.refresh);",
+									"        pm.environment.set('student_id', response.data.student.id);",
+									"        console.log('✓ Tokens saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"student@example.com\",\n    \"password\": \"SecurePassword123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"login",
+								""
+							]
+						},
+						"description": "Talabani autentifikatsiya qilish va JWT tokenlarni olish.\n\n**Required Fields:**\n- email: Student's email address\n- password: Student's password\n\n**Response:**\n- Returns student profile and JWT tokens (access + refresh)\n- Tokens are automatically saved to environment variables"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for student registration and login. Contract PDF is automatically generated upon registration."
+		},
+		{
+			"name": "Student Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{student_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"profile",
+								""
+							]
+						},
+						"description": "Autentifikatsiya qilingan talabaning profil ma'lumotlarini olish.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Response:**\n- Returns complete student profile including:\n  - Basic info (id, email, first_name, last_name, full_name)\n  - Contact info (phone, passport_serial_number)\n  - Birth date and source\n  - Group assignment (if any)\n  - Certificate and contract PDF URLs\n  - Timestamps (created_at, updated_at)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{student_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"Ali Valiyev O'g'li\",\n    \"phone\": \"+998901234568\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/profile/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"profile",
+								""
+							]
+						},
+						"description": "Autentifikatsiya qilingan talabaning profilini yangilash (qisman yangilash mumkin).\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Allowed Fields for Update:**\n- full_name: String, max 255 characters\n- phone: String, format '+999999999', max 13 digits, unique\n- certificate: File (upload via multipart/form-data)\n\n**Note:** Email, passport_serial_number, birth_date, source cannot be updated after registration.\n\n**Response:**\n- Returns updated student profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Contract",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{student_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"verification_code\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/verify-contract/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"verify-contract",
+								""
+							]
+						},
+						"description": "Shartnomani elektron imzo bilan tasdiqlash uchun SMS orqali yuborilgan kodni tekshirish.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Body:**\n- verification_code: String, exactly 6 digits (0-9)\n\n**Success Response (200):**\n- Returns student profile with contract_signed: true\n\n**Error Responses:**\n- 400: Invalid code, expired code, or contract already signed\n- 401: Authentication required\n- 404: Student profile not found\n\n**Notes:**\n- Code expires after 2 minutes (or configured time)\n- Code is deleted after successful verification (one-time use)\n- Contract can only be signed once"
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Verification Code",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{student_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/students/resend-code/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"students",
+								"resend-code",
+								""
+							]
+						},
+						"description": "Shartnomani tasdiqlash uchun yangi kod yuborish.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Body:** None (uses authenticated student's phone number)\n\n**Success Response (200):**\n- Returns confirmation message and expiration time\n\n**Error Responses:**\n- 400: Contract already signed\n- 401: Authentication required\n- 404: Student profile not found\n- 500: SMS sending failed\n\n**Notes:**\n- New code invalidates previous code\n- Code is sent via SMS to student's phone number\n- For test accounts, code may also be included in API response"
+					},
+					"response": []
+				}
+			],
+			"description": "Student profile management and contract verification endpoints. Requires authentication."
+		},
+		{
 			"name": "Employee Profile",
 			"item": [
 				{
