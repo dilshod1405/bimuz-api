@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 from datetime import date, timedelta
 from user.models import BaseModel, Speciality
@@ -54,6 +55,13 @@ class Group(BaseModel):
         help_text='Group price in UZS (sum)',
         default=0.00
     )
+    total_lessons = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Total Lessons',
+        help_text='Total number of lessons in this group (e.g., 72 lessons). Used for lesson-based payment milestones.',
+        validators=[MinValueValidator(1)]
+    )
     mentor = models.ForeignKey(  # type: ignore
         'user.Employee',
         on_delete=models.SET_NULL,
@@ -81,6 +89,45 @@ class Group(BaseModel):
                 'mentor': 'Tanlangan xodim Mentor roliga ega bo\'lishi kerak.'
             })
 
+    def calculate_finish_date(self) -> date | None:
+        """
+        Calculate finish date based on starting_date, total_lessons, and lesson schedule.
+        Returns None if starting_date or total_lessons is not set.
+        
+        The calculation counts forward from starting_date, only counting days that match
+        the lesson schedule (e.g., Mon/Wed/Fri or Tue/Thu/Sat).
+        """
+        if not self.starting_date or not self.total_lessons:
+            return None
+        
+        # Determine lesson weekdays based on schedule
+        if self.dates == Dates.MON_WED_FRI:
+            lesson_weekdays = [0, 2, 4]  # Monday, Wednesday, Friday
+        elif self.dates == Dates.TUE_THU_SAT:
+            lesson_weekdays = [1, 3, 5]  # Tuesday, Thursday, Saturday
+        else:
+            return None
+        
+        # Start from starting_date
+        current_date = self.starting_date
+        lessons_counted = 1  # Starting date is the first lesson
+        
+        # Count forward until we reach total_lessons
+        while lessons_counted < self.total_lessons:
+            # Move to next day
+            current_date += timedelta(days=1)
+            
+            # Check if this day is a lesson day
+            if current_date.weekday() in lesson_weekdays:
+                lessons_counted += 1
+        
+        return current_date
+    
+    @property
+    def finish_date(self) -> date | None:
+        """Get the calculated finish date for the group."""
+        return self.calculate_finish_date()
+    
     def save(self, *args, **kwargs):
         if self.starting_date:
             from django.utils import timezone
@@ -135,6 +182,32 @@ class Group(BaseModel):
             return None
         
         return (today - self.starting_date).days  # type: ignore
+    
+    def get_current_lesson_number(self) -> int:
+        """
+        Get the current lesson number based on attendance records.
+        Each attendance record represents one lesson.
+        Returns 0 if no lessons have been conducted yet.
+        """
+        if not self.pk:
+            return 0
+        return self.attendances.count()  # type: ignore
+    
+    def get_midpoint_lesson(self) -> int | None:
+        """
+        Get the midpoint lesson number (where first installment payment is required).
+        Returns None if total_lessons is not set.
+        """
+        if not self.total_lessons:
+            return None
+        return self.total_lessons // 2
+    
+    def get_final_lesson(self) -> int | None:
+        """
+        Get the final lesson number (where second installment payment is required).
+        Returns None if total_lessons is not set.
+        """
+        return self.total_lessons
 
 
 class Attendance(BaseModel):

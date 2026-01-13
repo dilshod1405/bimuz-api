@@ -11,17 +11,20 @@ class GroupSerializer(serializers.ModelSerializer):
     available_seats = serializers.IntegerField(read_only=True)
     is_planned = serializers.BooleanField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
+    finish_date = serializers.DateField(read_only=True)
+    current_lesson_number = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = Group
         fields = [
             'id', 'speciality_id', 'speciality_display',
-            'dates', 'dates_display', 'time', 'starting_date',
+            'dates', 'dates_display', 'time', 'starting_date', 'finish_date',
+            'total_lessons', 'current_lesson_number',
             'seats', 'current_students_count', 'available_seats',
-            'is_planned', 'is_active',
+            'is_planned', 'is_active', 'price',
             'mentor', 'mentor_name', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'finish_date', 'current_lesson_number', 'created_at', 'updated_at']
     
     def validate_mentor(self, value):
         if value and value.role != 'mentor':

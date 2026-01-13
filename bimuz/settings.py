@@ -284,3 +284,8 @@ MULTICARD_APPLICATION_ID = config('MULTICARD_APPLICATION_ID', default='')
 MULTICARD_SECRET = config('MULTICARD_SECRET', default='')
 MULTICARD_STORE_ID = config('MULTICARD_STORE_ID', default=0, cast=int)
 MULTICARD_CALLBACK_URL = config('MULTICARD_CALLBACK_URL', default='')
+
+# Base URL for constructing callback URLs dynamically
+# Set this to your public domain (e.g., https://api.yourdomain.com)
+# For development with ngrok: https://your-ngrok-url.ngrok.io
+BASE_URL = config('BASE_URL', default='')

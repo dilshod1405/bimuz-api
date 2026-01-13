@@ -927,12 +927,17 @@ Success Response (200 OK):
         "data": [
             {
                 "id": 1,
-                "professionality": "Revit Architecture Expert",
+                "speciality_id": "revit_architecture",
+                "speciality_display": "Revit Architecture",
                 "dates": "mon_wed_fri",
                 "dates_display": "Monday - Wednesday - Friday",
                 "time": "14:00:00",
                 "starting_date": "2026-02-01",
+                "finish_date": "2026-08-15",
+                "total_lessons": 72,
+                "current_lesson_number": 0,
                 "seats": 20,
+                "price": "3000000.00",
                 "current_students_count": 15,
                 "available_seats": 5,
                 "is_planned": true,
@@ -963,22 +968,28 @@ Request Headers:
 
 Request Body (JSON):
     {
-        "professionality": "Revit Architecture Expert",
+        "speciality_id": "revit_architecture",
         "dates": "mon_wed_fri",
         "time": "14:00:00",
         "starting_date": "2026-02-01",
+        "total_lessons": 72,
         "seats": 20,
+        "price": "3000000.00",
         "mentor": 1
     }
 
 Required Fields:
-    - professionality: Choice from available specialities
+    - speciality_id: Choice from available specialities ('revit_architecture', 'revit_structure', 'tekla_structure')
     - dates: Choice from available dates ('mon_wed_fri' or 'tue_thu_sat')
     - time: Time in HH:MM:SS format (e.g., "14:00:00")
     - seats: Positive integer (maximum number of students)
+    - price: Decimal number (group price in UZS)
 
 Optional Fields:
     - starting_date: Date in YYYY-MM-DD format (for planned groups)
+    - total_lessons: Positive integer (total number of lessons, e.g., 72)
+      - When set along with starting_date, finish_date is automatically calculated
+      - Finish date is calculated based on lesson schedule (Mon/Wed/Fri or Tue/Thu/Sat)
     - mentor: ID of employee with Mentor role
 
 Validation:
@@ -993,12 +1004,17 @@ Success Response (201 Created):
         "message": "Group created successfully.",
         "data": {
             "id": 1,
-            "professionality": "Revit Architecture Expert",
+            "speciality_id": "revit_architecture",
+            "speciality_display": "Revit Architecture",
             "dates": "mon_wed_fri",
             "dates_display": "Monday - Wednesday - Friday",
             "time": "14:00:00",
             "starting_date": "2026-02-01",
+            "finish_date": "2026-08-15",
+            "total_lessons": 72,
+            "current_lesson_number": 0,
             "seats": 20,
+            "price": "3000000.00",
             "current_students_count": 0,
             "available_seats": 20,
             "is_planned": true,
@@ -1032,12 +1048,17 @@ Success Response (200 OK):
         "message": "Group retrieved successfully.",
         "data": {
             "id": 1,
-            "professionality": "Revit Architecture Expert",
+            "speciality_id": "revit_architecture",
+            "speciality_display": "Revit Architecture",
             "dates": "mon_wed_fri",
             "dates_display": "Monday - Wednesday - Friday",
             "time": "14:00:00",
             "starting_date": "2026-02-01",
+            "finish_date": "2026-08-15",
+            "total_lessons": 72,
+            "current_lesson_number": 15,
             "seats": 20,
+            "price": "3000000.00",
             "current_students_count": 15,
             "available_seats": 5,
             "is_planned": true,
@@ -1074,12 +1095,19 @@ Request Body (JSON):
     }
 
 Updatable Fields:
-    - professionality: Choice from available specialities
+    - speciality_id: Choice from available specialities
     - dates: Choice from available dates
     - time: Time in HH:MM:SS format
     - starting_date: Date in YYYY-MM-DD format
+    - total_lessons: Positive integer (total number of lessons)
+      - When updated along with starting_date, finish_date is automatically recalculated
     - seats: Positive integer
+    - price: Decimal number (group price in UZS)
     - mentor: ID of employee with Mentor role
+
+Note: When starting_date and total_lessons are set, finish_date is automatically calculated
+      based on the lesson schedule (Mon/Wed/Fri or Tue/Thu/Sat). The finish_date is
+      read-only and cannot be set manually.
 
 Success Response (200 OK):
     {
@@ -1391,7 +1419,11 @@ Success Response (200 OK):
             "dates_display": "Monday - Wednesday - Friday",
             "time": "14:00:00",
             "starting_date": "2026-01-15",
+            "finish_date": "2026-08-15",
+            "total_lessons": 72,
+            "current_lesson_number": 0,
             "seats": 15,
+            "price": "3000000.00",
             "current_students_count": 5,
             "available_seats": 10,
             "is_planned": true,
@@ -1409,6 +1441,10 @@ Response Fields:
     - can_accept_bookings: Boolean indicating if group can accept new bookings
     - days_since_start: Number of days since group started (null if not started)
     - available_seats: Number of available seats in the group
+    - finish_date: Calculated finish date based on starting_date and total_lessons (null if not set)
+    - total_lessons: Total number of lessons in the group (null if not set)
+    - current_lesson_number: Current lesson number based on attendance records
+    - price: Group price in UZS (for payment information)
 
 --------------------------------------------------------------------------------
 2. BOOK STUDENT INTO GROUP
@@ -1607,6 +1643,29 @@ PAYMENT APIs
 The payment system integrates with Multicard payment gateway to handle student
 group payments. Invoices are automatically generated when students book groups.
 
+LESSON-BASED INSTALLMENT PAYMENT SYSTEM:
+--------------------------------------------------------------------------------
+To make payments more accessible for students, the system uses a 2-installment
+payment plan based on lesson progress:
+- When a student books a group, TWO installment invoices are automatically created
+- Each installment is 50% of the total group price
+- Payment milestones are based on lesson numbers:
+  * First installment: Must be paid by the midpoint lesson (e.g., lesson 36 if total is 72)
+  * Second installment: Must be paid by the final lesson (e.g., lesson 72)
+- Students can pay installments separately at their convenience
+- Payment is tied to lesson progress, not dates, allowing flexibility for rescheduled lessons
+- Both installments must be paid for full course access
+
+LESSON AND DATE INFORMATION:
+--------------------------------------------------------------------------------
+- Administrators set total_lessons (e.g., 72 lessons) for each group
+- When starting_date and total_lessons are set, finish_date is automatically calculated
+- Finish date calculation is based on lesson schedule:
+  * Mon/Wed/Fri groups: Lessons on Monday, Wednesday, Friday (3 per week)
+  * Tue/Thu/Sat groups: Lessons on Tuesday, Thursday, Saturday (3 per week)
+- Current lesson number is tracked from attendance records
+- Students can see: finish_date, total_lessons, and current_lesson_number in group information
+
 1. LIST INVOICES
 --------------------------------------------------------------------------------
 Endpoint: GET /api/v1/payment/invoices/
@@ -1632,10 +1691,58 @@ Success Response (200 OK):
                 "student_phone": "+998901234567",
                 "group": 3,
                 "group_name": "Revit Architecture - Monday - Wednesday - Friday",
-                "amount": "500000.00",
+                "amount": "250000.00",
+                "total_amount": "500000.00",
+                "installment_number": 1,
+                "is_installment": true,
+                "related_invoice_id": 2,
                 "status": "created",
                 "status_display": "Created",
                 "is_paid": false,
+                "payment_progress": {
+                    "is_installment": true,
+                    "installment_1_paid": false,
+                    "installment_2_paid": false,
+                    "total_amount": 500000.0,
+                    "paid_amount": 0.0,
+                    "remaining_amount": 500000.0,
+                    "all_paid": false
+                },
+                "multicard_uuid": null,
+                "multicard_invoice_id": null,
+                "checkout_url": null,
+                "receipt_url": null,
+                "payment_time": null,
+                "payment_method": null,
+                "card_pan": null,
+                "notes": null,
+                "created_at": "2026-01-12T10:00:00Z",
+                "updated_at": "2026-01-12T10:00:00Z"
+            },
+            {
+                "id": 2,
+                "student": 5,
+                "student_name": "John Doe",
+                "student_phone": "+998901234567",
+                "group": 3,
+                "group_name": "Revit Architecture - Monday - Wednesday - Friday",
+                "amount": "250000.00",
+                "total_amount": "500000.00",
+                "installment_number": 2,
+                "is_installment": true,
+                "related_invoice_id": 1,
+                "status": "created",
+                "status_display": "Created",
+                "is_paid": false,
+                "payment_progress": {
+                    "is_installment": true,
+                    "installment_1_paid": false,
+                    "installment_2_paid": false,
+                    "total_amount": 500000.0,
+                    "paid_amount": 0.0,
+                    "remaining_amount": 500000.0,
+                    "all_paid": false
+                },
                 "multicard_uuid": null,
                 "multicard_invoice_id": null,
                 "checkout_url": null,
@@ -1675,10 +1782,23 @@ Success Response (200 OK):
         "student_phone": "+998901234567",
         "group": 3,
         "group_name": "Revit Architecture - Monday - Wednesday - Friday",
-        "amount": "500000.00",
+        "amount": "250000.00",
+        "total_amount": "500000.00",
+        "installment_number": 1,
+        "is_installment": true,
+        "related_invoice_id": 2,
         "status": "pending",
         "status_display": "Pending Payment",
         "is_paid": false,
+        "payment_progress": {
+            "is_installment": true,
+            "installment_1_paid": false,
+            "installment_2_paid": false,
+            "total_amount": 500000.0,
+            "paid_amount": 0.0,
+            "remaining_amount": 500000.0,
+            "all_paid": false
+        },
         "multicard_uuid": "f6339f31-6a09-11f0-9a1b-00505680eaf6",
         "multicard_invoice_id": "1",
         "checkout_url": "https://app.rhmt.uz/invoice/f6339f31-6a09-11f0-9a1b-00505680eaf6",
@@ -1885,16 +2005,44 @@ INVOICE STATUS VALUES:
 
 AUTOMATIC INVOICE GENERATION:
 --------------------------------------------------------------------------------
-Invoices are automatically generated when:
+Two installment invoices are automatically generated when:
 1. A student books a group (student.group is set)
 2. The group has a price set (price > 0)
+
+Each installment invoice:
+- Represents 50% of the total group price
+- Is linked to the other installment via related_invoice_id
+- Can be paid independently
+- Shares the same total_amount value
+
+Example: If a group costs 500,000 UZS:
+- Invoice 1: 250,000 UZS (Installment 1/2)
+- Invoice 2: 250,000 UZS (Installment 2/2)
+- Both invoices have total_amount: 500,000 UZS
 
 AUTOMATIC PRICE UPDATES:
 --------------------------------------------------------------------------------
 When a group's price changes:
-- Unpaid invoices (created/pending status) are automatically updated with the
-  new price
+- Unpaid installment invoices (created/pending status) are automatically updated
+  with the new price, maintaining the 50/50 split
+- Both installments are updated proportionally
 - Paid invoices are NOT updated (amount remains as paid)
+
+PAYMENT PROGRESS TRACKING:
+--------------------------------------------------------------------------------
+Each installment invoice includes a payment_progress object that shows:
+- is_installment: true (indicates this is an installment invoice)
+- installment_1_paid: boolean (whether first installment is paid)
+- installment_2_paid: boolean (whether second installment is paid)
+- total_amount: float (total group price)
+- paid_amount: float (sum of all paid installments)
+- remaining_amount: float (amount still to be paid)
+- all_paid: boolean (whether both installments are paid)
+- payment_milestone_lesson: integer (lesson number by which this installment must be paid)
+- second_milestone_lesson: integer (lesson number for the other installment)
+- current_lesson: integer (current lesson number from attendance records)
+- total_lessons: integer (total number of lessons in the group)
+- lessons_remaining: integer (number of lessons remaining)
 
 ================================================================================
 LAST UPDATED

@@ -13,22 +13,24 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Student)
 def create_invoice_on_booking(sender, instance: Student, created: bool, **kwargs):
     """
-    Create invoice automatically when student books a group.
+    Create first installment invoice automatically when student books a group.
+    First installment is 50% of the group price.
+    Second installment will be created when first is paid or when needed.
     Triggered when student.group is set.
     """
     # Only process if group is set
     if not instance.group:
         return
     
-    # Check if invoice already exists for this student-group combination
-    existing_invoice = Invoice.objects.filter(
+    # Check if invoices already exist for this student-group combination
+    existing_invoices = Invoice.objects.filter(
         student=instance,
         group=instance.group,
         status__in=[InvoiceStatus.CREATED, InvoiceStatus.PENDING, InvoiceStatus.PAID]
-    ).first()
+    )
     
-    if existing_invoice:
-        logger.info(f"Invoice already exists for student {instance.id} and group {instance.group.id}")
+    if existing_invoices.exists():
+        logger.info(f"Invoices already exist for student {instance.id} and group {instance.group.id}")
         return
     
     # Get the group price
@@ -40,13 +42,23 @@ def create_invoice_on_booking(sender, instance: Student, created: bool, **kwargs
     
     try:
         with transaction.atomic():
+            # Calculate first installment amount (50% of total)
+            total = float(group_price)
+            first_installment_amount = total / 2
+            
+            # Create first installment invoice
             invoice = Invoice.objects.create(
                 student=instance,
                 group=instance.group,
-                amount=group_price,
-                status=InvoiceStatus.CREATED
+                amount=first_installment_amount,
+                status=InvoiceStatus.CREATED,
+                notes=f"First installment (50%) for group {instance.group.id}. Total group price: {group_price} UZS."
             )
-            logger.info(f"Created invoice {invoice.id} for student {instance.id} and group {instance.group.id} with amount {group_price}")
+            
+            logger.info(
+                f"Created first installment invoice {invoice.id} for student {instance.id} and group {instance.group.id}: "
+                f"{first_installment_amount} UZS (50% of {group_price} UZS)."
+            )
     except Exception as e:
         logger.error(f"Failed to create invoice for student {instance.id} and group {instance.group.id}: {str(e)}")
 
@@ -56,6 +68,7 @@ def update_invoice_amount_on_price_change(sender, instance: Group, **kwargs):
     """
     Update invoice amounts when group price changes.
     Only updates invoices that are not paid (created or pending status).
+    Updates first installment invoices proportionally (50% of new price).
     """
     if not instance.pk:
         # New group, no invoices to update
@@ -76,10 +89,18 @@ def update_invoice_amount_on_price_change(sender, instance: Group, **kwargs):
             )
             
             updated_count = 0
+            
             for invoice in unpaid_invoices:
-                if invoice.update_amount(new_price):
+                # Calculate new first installment amount (50% of new price)
+                new_first_installment = float(new_price) / 2
+                
+                # Update invoice amount
+                if invoice.update_amount(new_first_installment):
                     updated_count += 1
-                    logger.info(f"Updated invoice {invoice.id} amount from {old_price} to {new_price} for group {instance.id}")
+                    logger.info(
+                        f"Updated invoice {invoice.id} amount from {old_price/2} to {new_first_installment} "
+                        f"for group {instance.id} (price changed from {old_price} to {new_price})"
+                    )
             
             if updated_count > 0:
                 logger.info(f"Updated {updated_count} invoice(s) for group {instance.id} due to price change")

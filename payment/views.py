@@ -4,8 +4,11 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from datetime import datetime
 import logging
 
 from payment.models import Invoice, InvoiceStatus
@@ -190,6 +193,12 @@ class CreatePaymentView(generics.GenericAPIView):
                 invoice.checkout_url = data.get('checkout_url')
                 invoice.status = InvoiceStatus.PENDING
                 invoice.save(update_fields=['multicard_uuid', 'multicard_invoice_id', 'checkout_url', 'status', 'updated_at'])
+                
+                logger.info(
+                    f"Invoice {invoice.id} updated with Multicard data: "
+                    f"uuid={invoice.multicard_uuid}, invoice_id={invoice.multicard_invoice_id}, "
+                    f"checkout_url={invoice.checkout_url}"
+                )
 
             return Response({
                 'success': True,
@@ -216,22 +225,61 @@ class CreatePaymentView(generics.GenericAPIView):
             )
 
 
-@api_view(['POST'])
+@csrf_exempt  # Multicard callback doesn't send CSRF token
+@api_view(['POST', 'GET'])  # Allow GET for testing
 @permission_classes([permissions.AllowAny])  # Multicard will call this endpoint
 def payment_callback(request):
     """
     Handle payment callback from Multicard.
     This endpoint receives payment notifications from Multicard.
     """
-    serializer = PaymentCallbackSerializer(data=request.data)
+    # Handle GET requests for testing
+    if request.method == 'GET':
+        return Response({
+            'success': True,
+            'message': 'Callback endpoint is reachable',
+            'endpoint': '/api/v1/payment/callback/',
+            'method': 'POST',
+            'note': 'This endpoint should receive POST requests from Multicard'
+        }, status=status.HTTP_200_OK)
+    
+    logger.info(f"Payment callback received. Method: {request.method}, Content-Type: {request.content_type}")
+    logger.info(f"Callback request headers: {dict(request.headers)}")
+    
+    # DRF automatically parses JSON, so we can use request.data directly
+    # Don't access request.body after request.data - it will cause RawPostDataException
+    try:
+        # Use DRF parsed data (already parsed from JSON)
+        data = request.data if hasattr(request, 'data') else {}
+        
+        # Try to get raw body for logging (only if not already consumed)
+        try:
+            if hasattr(request, '_body') and request._body:
+                logger.info(f"Callback request body (raw): {request._body}")
+        except Exception:
+            pass  # Body already consumed, skip logging
+        
+        logger.info(f"Callback request data (parsed): {data}")
+    except Exception as e:
+        logger.error(f"Error getting request data: {e}", exc_info=True)
+        # Fallback to empty dict
+        data = {}
+    
+    logger.info(f"Final callback data: {data}")
+    
+    serializer = PaymentCallbackSerializer(data=data)
     if not serializer.is_valid():
         logger.error(f"Invalid callback data: {serializer.errors}")
+        logger.error(f"Received data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+        # IMPORTANT: Multicard requires HTTP 200 even for errors, but with success: false
+        # The message will be shown to the user
         return Response(
-            {'success': False, 'message': 'Invalid callback data'},
-            status=status.HTTP_400_BAD_REQUEST
+            {'success': False, 'message': 'Неверные данные запроса'},
+            status=status.HTTP_200_OK
         )
 
-    data = serializer.validated_data
+    validated_data = serializer.validated_data
+    logger.info(f"Validated callback data: invoice_id={validated_data.get('invoice_id')}, uuid={validated_data.get('uuid')}")
 
     # Verify signature
     secret = getattr(settings, 'MULTICARD_SECRET', None)
@@ -239,67 +287,131 @@ def payment_callback(request):
 
     if not secret or not store_id:
         logger.error("Multicard credentials not configured")
+        # IMPORTANT: Return HTTP 200 with success: false (message will be shown to user)
         return Response(
-            {'success': False, 'message': 'Payment service configuration error'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'success': False, 'message': 'Ошибка конфигурации платежного сервиса'},
+            status=status.HTTP_200_OK
         )
 
     # Verify signature
+    invoice_id_str = str(validated_data['invoice_id'])
+    amount_int = int(validated_data['amount'])
+    sign_str = str(validated_data['sign'])
+    
+    # Debug signature verification
+    import hashlib
+    sign_string = f"{store_id}{invoice_id_str}{amount_int}{secret}"
+    expected_sign = hashlib.md5(sign_string.encode()).hexdigest()
+    
+    logger.info(f"Signature verification: store_id={store_id}, invoice_id={invoice_id_str}, amount={amount_int}")
+    logger.info(f"Sign string: {sign_string}")
+    logger.info(f"Expected sign (MD5): {expected_sign}")
+    logger.info(f"Received sign: {sign_str}")
+    
     is_valid = multicard_service.verify_callback_signature(
         store_id=store_id,
-        invoice_id=data['invoice_id'],
-        amount=data['amount'],
+        invoice_id=invoice_id_str,
+        amount=amount_int,
         secret=secret,
-        sign=data['sign']
+        sign=sign_str
     )
 
     if not is_valid:
-        logger.warning(f"Invalid callback signature for invoice {data['invoice_id']}")
+        logger.warning(f"Invalid callback signature for invoice {invoice_id_str}")
+        logger.warning(f"Expected: {expected_sign.lower()}, Received: {sign_str.lower()}")
+        # IMPORTANT: Return HTTP 200 with success: false (message will be shown to user)
         return Response(
-            {'success': False, 'message': 'Invalid signature'},
-            status=status.HTTP_400_BAD_REQUEST
+            {'success': False, 'message': 'Неверная подпись запроса'},
+            status=status.HTTP_200_OK
         )
+    
+    logger.info(f"Signature verified successfully for invoice {invoice_id_str}")
 
-    # Find invoice by Multicard invoice_id
+    # Find invoice by Multicard invoice_id (try both string and integer)
+    # invoice_id_str already set above
+    invoice = None
+    
     try:
-        invoice = Invoice.objects.get(multicard_invoice_id=data['invoice_id'])
+        # First try to find by multicard_invoice_id
+        invoice = Invoice.objects.get(multicard_invoice_id=invoice_id_str)
+        logger.info(f"Found invoice {invoice.id} by multicard_invoice_id={invoice_id_str}")
+    except Invoice.DoesNotExist:
+        try:
+            # Try to find by invoice ID directly (in case multicard_invoice_id wasn't set)
+            invoice_id_int = int(validated_data['invoice_id'])
+            invoice = Invoice.objects.get(id=invoice_id_int)
+            logger.info(f"Found invoice {invoice.id} by id={invoice_id_int}")
+            # Update multicard_invoice_id for future callbacks
+            invoice.multicard_invoice_id = invoice_id_str
+        except (Invoice.DoesNotExist, ValueError):
+            logger.error(f"Invoice not found for Multicard invoice_id: {invoice_id_str}")
+            logger.error(f"Available invoices with multicard_invoice_id: {list(Invoice.objects.exclude(multicard_invoice_id__isnull=True).values_list('id', 'multicard_invoice_id'))}")
+            # IMPORTANT: Return HTTP 200 with success: false (message will be shown to user)
+            # According to docs: "Не найден инвойс" will be displayed to user
+            return Response(
+                {'success': False, 'message': 'Не найден инвойс'},
+                status=status.HTTP_200_OK
+            )
 
-        # Check if already processed (idempotency)
-        if invoice.is_paid:
-            logger.info(f"Invoice {invoice.id} already paid, returning success")
-            return Response({'success': True, 'message': 'Payment already processed'})
+    # Check idempotency by UUID (if same uuid already processed)
+    callback_uuid = validated_data.get('uuid', '')
+    if callback_uuid and invoice.multicard_uuid == callback_uuid and invoice.is_paid:
+        logger.info(f"Invoice {invoice.id} already paid with same UUID {callback_uuid}, returning success (idempotency)")
+        return Response({'success': True, 'message': 'Payment already processed'}, status=status.HTTP_200_OK)
+    
+    # If invoice is already paid but with different UUID, still return success
+    if invoice.is_paid:
+        logger.info(f"Invoice {invoice.id} already paid (different UUID), returning success")
+        return Response({'success': True, 'message': 'Payment already processed'}, status=status.HTTP_200_OK)
 
-        # Update invoice with payment details
+    # Update invoice with payment details
+    try:
+        # Parse payment_time if provided, otherwise use current time
+        payment_time_str = validated_data.get('payment_time') or ''
+        payment_time = timezone.now()
+        if payment_time_str and payment_time_str.strip():
+            try:
+                # Try to parse Multicard payment_time format: "YYYY-MM-DD HH:MM:SS"
+                payment_time = timezone.make_aware(
+                    datetime.strptime(payment_time_str, '%Y-%m-%d %H:%M:%S')
+                )
+            except (ValueError, TypeError):
+                try:
+                    # Try ISO format
+                    payment_time = timezone.make_aware(
+                        datetime.fromisoformat(payment_time_str.replace('Z', '+00:00'))
+                    )
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not parse payment_time '{payment_time_str}', using current time")
+                    payment_time = timezone.now()
+        
         with transaction.atomic():
             invoice.status = InvoiceStatus.PAID
-            invoice.receipt_url = data.get('receipt_url', '')
-            invoice.payment_time = timezone.now()
-            invoice.payment_method = data.get('ps', '')
-            invoice.card_pan = data.get('card_pan', '')
-            invoice.multicard_uuid = data.get('uuid', invoice.multicard_uuid)
+            invoice.receipt_url = validated_data.get('receipt_url', '') or ''
+            invoice.payment_time = payment_time
+            invoice.payment_method = validated_data.get('ps', '') or ''
+            invoice.card_pan = validated_data.get('card_pan', '') or ''
+            invoice.multicard_uuid = validated_data.get('uuid', invoice.multicard_uuid) or ''
             invoice.save(update_fields=[
                 'status', 'receipt_url', 'payment_time', 'payment_method',
-                'card_pan', 'multicard_uuid', 'updated_at'
+                'card_pan', 'multicard_uuid', 'multicard_invoice_id', 'updated_at'
             ])
 
-        logger.info(f"Invoice {invoice.id} marked as paid via callback")
+        logger.info(f"Invoice {invoice.id} marked as paid via callback. UUID: {invoice.multicard_uuid}")
 
-        return Response({'success': True, 'message': 'Payment processed successfully'})
-
-    except Invoice.DoesNotExist:
-        logger.error(f"Invoice not found for Multicard invoice_id: {data['invoice_id']}")
-        return Response(
-            {'success': False, 'message': 'Invoice not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        # IMPORTANT: Must return HTTP 200 with success: true
+        return Response({'success': True, 'message': 'Payment processed successfully'}, status=status.HTTP_200_OK)
     except Exception as e:
-        logger.error(f"Error processing payment callback: {str(e)}", exc_info=True)
+        logger.error(f"Error updating invoice {invoice.id}: {str(e)}", exc_info=True)
+        # IMPORTANT: Return HTTP 200 with success: false (message will be shown to user)
+        # According to docs, if we return 500 or timeout, Multicard will freeze the transaction
         return Response(
-            {'success': False, 'message': 'Internal server error'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'success': False, 'message': 'Ошибка обработки платежа'},
+            status=status.HTTP_200_OK
         )
 
 
+@csrf_exempt  # Multicard webhook doesn't send CSRF token
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])  # Multicard will call this endpoint
 def payment_webhook(request):
@@ -316,18 +428,20 @@ def payment_webhook(request):
 
     if not all([uuid, invoice_id, amount, status_value, sign]):
         logger.error(f"Incomplete webhook data: {request.data}")
+        # IMPORTANT: Webhooks should return HTTP 2xx (docs say HTTP 2xx)
         return Response(
             {'success': False, 'message': 'Incomplete webhook data'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_200_OK
         )
 
     # Verify signature
     secret = getattr(settings, 'MULTICARD_SECRET', None)
     if not secret:
         logger.error("Multicard secret not configured")
+        # IMPORTANT: Webhooks should return HTTP 2xx
         return Response(
             {'success': False, 'message': 'Payment service configuration error'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_200_OK
         )
 
     is_valid = multicard_service.verify_webhook_signature(
@@ -340,9 +454,10 @@ def payment_webhook(request):
 
     if not is_valid:
         logger.warning(f"Invalid webhook signature for invoice {invoice_id}")
+        # IMPORTANT: Webhooks should return HTTP 2xx
         return Response(
             {'success': False, 'message': 'Invalid signature'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_200_OK
         )
 
     # Find invoice
@@ -379,15 +494,17 @@ def payment_webhook(request):
 
     except Invoice.DoesNotExist:
         logger.error(f"Invoice not found for Multicard invoice_id: {invoice_id}")
+        # IMPORTANT: Webhooks should return HTTP 2xx
         return Response(
             {'success': False, 'message': 'Invoice not found'},
-            status=status.HTTP_404_NOT_FOUND
+            status=status.HTTP_200_OK
         )
     except Exception as e:
         logger.error(f"Error processing payment webhook: {str(e)}", exc_info=True)
+        # IMPORTANT: Webhooks should return HTTP 2xx (otherwise will retry 5 times)
         return Response(
             {'success': False, 'message': 'Internal server error'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_200_OK
         )
 
 

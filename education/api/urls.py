@@ -18,4 +18,5 @@ urlpatterns = [
     path('booking/groups/', booking_views.GroupBookingListView.as_view(), name='booking-group-list'),
     path('booking/book/', booking_views.StudentBookingCreateView.as_view(), name='booking-create'),
     path('booking/cancel/', booking_views.StudentBookingCancelView.as_view(), name='booking-cancel'),
+    path('booking/change-group/', booking_views.StudentGroupChangeView.as_view(), name='booking-change-group'),
 ]

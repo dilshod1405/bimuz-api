@@ -124,11 +124,25 @@ class MulticardPaymentService:
 
             # Use provided callback_url or default from settings
             final_callback_url = callback_url or self.callback_url
+            
+            # If callback_url is not set, try to construct from BASE_URL setting
             if not final_callback_url:
-                return {
-                    'success': False,
-                    'message': 'Callback URL not configured'
-                }
+                base_url = getattr(settings, 'BASE_URL', None)
+                if base_url:
+                    final_callback_url = f"{base_url.rstrip('/')}/api/v1/payment/callback/"
+                else:
+                    return {
+                        'success': False,
+                        'message': 'Callback URL not configured. Please set MULTICARD_CALLBACK_URL or BASE_URL in settings.'
+                    }
+            
+            # Warn if using localhost (won't work from external services)
+            if 'localhost' in final_callback_url or '127.0.0.1' in final_callback_url:
+                logger.warning(
+                    f"Callback URL contains localhost: {final_callback_url}. "
+                    f"This will NOT work for external callbacks from Multicard. "
+                    f"Use a public URL (ngrok for testing, or your domain for production)."
+                )
 
             data = {
                 'store_id': self.store_id,

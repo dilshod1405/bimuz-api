@@ -760,7 +760,7 @@
 								""
 							]
 						},
-						"description": "Retrieve a list of all groups (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Query Parameters (optional):**\n- page: Page number for pagination (default: 1)\n- page_size: Number of results per page (default: 20)\n\n**Response:**\n- Returns list of groups with computed fields (current_students_count, available_seats, is_planned, is_active)"
+						"description": "Retrieve a list of all groups (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Query Parameters (optional):**\n- page: Page number for pagination (default: 1)\n- page_size: Number of results per page (default: 20)\n\n**Response:**\n- Returns list of groups with computed fields:\n  * current_students_count: Number of students in the group\n  * available_seats: Available seats remaining\n  * is_planned: Whether group is planned (not started yet)\n  * is_active: Whether group is currently active\n  * finish_date: Calculated finish date (based on starting_date and total_lessons)\n  * current_lesson_number: Current lesson number from attendance records\n  * price: Group price in UZS"
 					},
 					"response": []
 				},
@@ -787,7 +787,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"professionality\": \"Revit Architecture Expert\",\n    \"dates\": \"mon_wed_fri\",\n    \"time\": \"14:00:00\",\n    \"starting_date\": \"2026-02-01\",\n    \"seats\": 20,\n    \"mentor\": 1\n}",
+							"raw": "{\n    \"speciality_id\": \"revit_architecture\",\n    \"dates\": \"mon_wed_fri\",\n    \"time\": \"14:00:00\",\n    \"starting_date\": \"2026-02-01\",\n    \"total_lessons\": 72,\n    \"seats\": 20,\n    \"price\": \"3000000.00\",\n    \"mentor\": 1\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -807,7 +807,7 @@
 								""
 							]
 						},
-						"description": "Create a new group (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Required Fields:**\n- professionality: String (professional expertise or specialization)\n- dates: Choice ('mon_wed_fri' or 'tue_thu_sat')\n- time: Time in HH:MM:SS format (e.g., \"14:00:00\")\n- seats: Positive integer (maximum number of students)\n\n**Optional Fields:**\n- starting_date: Date in YYYY-MM-DD format (for planned groups)\n- mentor: ID of employee with Mentor role\n\n**Validation:**\n- Mentor must have 'mentor' role\n- Professionality_id must be a valid choice\n- Dates must be a valid choice\n- Seats must be a positive integer"
+						"description": "Create a new group (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Required Fields:**\n- speciality_id: Choice from available specialities ('revit_architecture', 'revit_structure', 'tekla_structure')\n- dates: Choice ('mon_wed_fri' or 'tue_thu_sat')\n- time: Time in HH:MM:SS format (e.g., \"14:00:00\")\n- seats: Positive integer (maximum number of students)\n- price: Decimal number (group price in UZS)\n\n**Optional Fields:**\n- starting_date: Date in YYYY-MM-DD format (for planned groups)\n- total_lessons: Positive integer (total number of lessons, e.g., 72)\n  * When set along with starting_date, finish_date is automatically calculated\n  * Finish date is calculated based on lesson schedule (Mon/Wed/Fri or Tue/Thu/Sat)\n- mentor: ID of employee with Mentor role\n\n**Validation:**\n- Mentor must have 'mentor' role\n- Speciality_id must be a valid choice\n- Dates must be a valid choice\n- Seats must be a positive integer\n- Price must be a positive decimal number\n\n**Note:** When starting_date and total_lessons are set, finish_date is automatically calculated and cannot be set manually."
 					},
 					"response": []
 				},
@@ -840,7 +840,7 @@
 								""
 							]
 						},
-						"description": "Retrieve a specific group by ID (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Response:**\n- Returns complete group data with computed fields"
+						"description": "Retrieve a specific group by ID (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Response:**\n- Returns complete group data with computed fields:\n  * finish_date: Calculated finish date (read-only)\n  * current_lesson_number: Current lesson number from attendance records\n  * current_students_count: Number of students in the group\n  * available_seats: Available seats remaining\n  * is_planned: Whether group is planned (not started yet)\n  * is_active: Whether group is currently active"
 					},
 					"response": []
 				},
@@ -888,7 +888,7 @@
 								""
 							]
 						},
-						"description": "Update a specific group (partial update) (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Updatable Fields:**\n- professionality: String (professional expertise or specialization)\n- dates: Choice from available dates\n- time: Time in HH:MM:SS format\n- starting_date: Date in YYYY-MM-DD format\n- seats: Positive integer\n- mentor: ID of employee with Mentor role"
+						"description": "Update a specific group (partial update) (Administrator only).\n\n**Authentication:** Required (JWT Bearer Token)\n**Permission:** Administrator role only\n\n**Path Parameters:**\n- id: Group ID (integer)\n\n**Updatable Fields:**\n- speciality_id: Choice from available specialities\n- dates: Choice from available dates\n- time: Time in HH:MM:SS format\n- starting_date: Date in YYYY-MM-DD format\n- total_lessons: Positive integer (total number of lessons)\n  * When updated along with starting_date, finish_date is automatically recalculated\n- seats: Positive integer\n- price: Decimal number (group price in UZS)\n- mentor: ID of employee with Mentor role\n\n**Note:** When starting_date and total_lessons are set, finish_date is automatically calculated based on the lesson schedule (Mon/Wed/Fri or Tue/Thu/Sat). The finish_date is read-only and cannot be set manually."
 					},
 					"response": []
 				},
@@ -1150,7 +1150,7 @@
 								""
 							]
 						},
-						"description": "List all groups with booking information including availability.\n\n**Authentication:** Not required\n\n**Response Fields:**\n- can_accept_bookings: Boolean indicating if group can accept new bookings\n- days_since_start: Number of days since group started (null if not started)\n- available_seats: Number of available seats in the group\n\n**10-Day Rule:**\n- If group hasn't started (planned): booking allowed\n- If group has started: booking allowed only if < 10 days have passed\n- If group started >= 10 days ago: booking not allowed"
+						"description": "List all groups with booking information including availability.\n\n**Authentication:** Not required\n\n**Response Fields:**\n- can_accept_bookings: Boolean indicating if group can accept new bookings\n- days_since_start: Number of days since group started (null if not started)\n- available_seats: Number of available seats in the group\n- finish_date: Calculated finish date based on starting_date and total_lessons (null if not set)\n- total_lessons: Total number of lessons in the group (null if not set)\n- current_lesson_number: Current lesson number based on attendance records\n- price: Group price in UZS (for payment information)\n\n**10-Day Rule:**\n- If group hasn't started (planned): booking allowed\n- If group has started: booking allowed only if < 10 days have passed\n- If group started >= 10 days ago: booking not allowed\n\n**Lesson Information:**\n- Students can see finish_date, total_lessons, and current_lesson_number to understand course duration and progress"
 					},
 					"response": []
 				},
@@ -1252,6 +1252,7 @@
 		},
 		{
 			"name": "Payment",
+			"description": "Payment APIs for managing student group payments via Multicard gateway.\n\n**Lesson-Based Installment Payment System:**\n- When a student books a group, TWO installment invoices are automatically created\n- Each installment is 50% of the total group price\n- Payment milestones are based on lesson numbers:\n  * First installment: Must be paid by the midpoint lesson (e.g., lesson 36 if total is 72)\n  * Second installment: Must be paid by the final lesson (e.g., lesson 72)\n- Students can pay installments separately at their convenience\n- Payment is tied to lesson progress, not dates, allowing flexibility for rescheduled lessons\n- Both installments must be paid for full course access\n\n**Lesson and Date Information:**\n- Administrators set total_lessons (e.g., 72 lessons) for each group\n- When starting_date and total_lessons are set, finish_date is automatically calculated\n- Finish date calculation is based on lesson schedule (Mon/Wed/Fri or Tue/Thu/Sat)\n- Current lesson number is tracked from attendance records\n- Students can see: finish_date, total_lessons, and current_lesson_number in group information",
 			"item": [
 				{
 					"name": "List Invoices",
@@ -1277,7 +1278,7 @@
 								""
 							]
 						},
-						"description": "List all invoices. Students can see only their own invoices. Staff/admin can see all invoices.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Response:**\n- Returns list of invoices with full details\n- Students see only their own invoices\n- Staff/admin see all invoices\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view invoices"
+						"description": "List all invoices. Students can see only their own invoices. Staff/admin can see all invoices.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Response:**\n- Returns list of invoices with full details including installment information\n- Each invoice includes:\n  - amount: Installment amount (50% of total)\n  - total_amount: Total group price\n  - installment_number: 1 or 2 (for installment invoices)\n  - is_installment: Boolean indicating if this is an installment invoice\n  - related_invoice_id: ID of the other installment invoice\n  - payment_progress: Object showing payment status for both installments\n- Students see only their own invoices\n- Staff/admin see all invoices\n\n**Note:** When a student books a group, two installment invoices are automatically created (50% each).\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view invoices"
 					},
 					"response": []
 				},
@@ -1306,7 +1307,7 @@
 								""
 							]
 						},
-						"description": "Get detailed information about a specific invoice.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**URL Parameters:**\n- invoice_id: Invoice ID (integer, required)\n\n**Response:**\n- Returns full invoice details including payment status, Multicard UUID, checkout URL, etc.\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
+						"description": "Get detailed information about a specific invoice.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**URL Parameters:**\n- invoice_id: Invoice ID (integer, required)\n\n**Response:**\n- Returns full invoice details including:\n  - Installment information (installment_number, total_amount, is_installment, related_invoice_id)\n  - Payment progress (payment_progress object with installment status, paid amount, remaining amount, all_paid flag)\n  - Payment status, Multicard UUID, checkout URL, receipt URL, etc.\n\n**Payment Progress Object:**\n- is_installment: Boolean\n- installment_1_paid: Boolean (whether first installment is paid)\n- installment_2_paid: Boolean (whether second installment is paid)\n- total_amount: Total group price\n- paid_amount: Sum of all paid installments\n- remaining_amount: Amount still to be paid\n- all_paid: Boolean (whether both installments are paid)\n\n**Error Responses:**\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
 					},
 					"response": []
 				},
@@ -1348,7 +1349,7 @@
 								""
 							]
 						},
-						"description": "Create a payment link for an invoice via Multicard payment gateway.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Body:**\n- invoice_id: ID of the invoice to pay (integer, required)\n- lang: Payment page language. Options: \"ru\", \"uz\", \"en\". Default: \"uz\" (optional)\n- return_url: URL to redirect after successful payment (optional)\n- return_error_url: URL to redirect after payment error (optional)\n- send_sms: Send invoice link via SMS to student. Default: false (optional)\n\n**Response:**\n- Returns checkout_url, short_link, deeplink, and uuid for payment\n\n**Error Responses:**\n- 400: Invoice is already paid, cancelled, or failed to create payment link\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to pay this invoice\n- 404: Invoice not found\n- 500: Server error during payment link creation"
+						"description": "Create a payment link for an invoice via Multicard payment gateway.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Request Body:**\n- invoice_id: ID of the invoice to pay (integer, required)\n  - Can be either installment 1 or installment 2\n  - Each installment can be paid independently\n- lang: Payment page language. Options: \"ru\", \"uz\", \"en\". Default: \"uz\" (optional)\n- return_url: URL to redirect after successful payment (optional)\n- return_error_url: URL to redirect after payment error (optional)\n- send_sms: Send invoice link via SMS to student. Default: false (optional)\n\n**Response:**\n- Returns checkout_url, short_link, deeplink, and uuid for payment\n\n**Note:** Students can pay installments separately. Each installment invoice has its own payment link.\n\n**Error Responses:**\n- 400: Invoice is already paid, cancelled, or failed to create payment link\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to pay this invoice\n- 404: Invoice not found\n- 500: Server error during payment link creation"
 					},
 					"response": []
 				},
@@ -1383,7 +1384,7 @@
 								}
 							]
 						},
-						"description": "Check the current payment status of an invoice from Multicard.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Query Parameters:**\n- invoice_id: Invoice ID to check (integer, required)\n\n**Response:**\n- Returns current invoice status, Multicard status, checkout URL, receipt URL, and payment time\n\n**Error Responses:**\n- 400: invoice_id parameter is required or failed to get status\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
+						"description": "Check the current payment status of an invoice from Multicard.\n\n**Authentication:** Required (JWT Bearer Token)\n\n**Query Parameters:**\n- invoice_id: Invoice ID to check (integer, required)\n  - Can check status of any installment invoice\n\n**Response:**\n- Returns current invoice status, Multicard status, checkout URL, receipt URL, and payment time\n- For installment invoices, check payment_progress to see status of both installments\n\n**Error Responses:**\n- 400: invoice_id parameter is required or failed to get status\n- 401: Invalid or missing authentication token\n- 403: User does not have permission to view this invoice\n- 404: Invoice not found"
 					},
 					"response": []
 				}

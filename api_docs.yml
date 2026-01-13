@@ -893,7 +893,11 @@ response_format:
             dates_display: "Monday - Wednesday - Friday"
             time: "14:00:00"
             starting_date: "2026-01-15"
+            finish_date: "2026-08-15"
+            total_lessons: 72
+            current_lesson_number: 0
             seats: 15
+            price: "3000000.00"
             current_students_count: 5
             available_seats: 10
             is_planned: true
@@ -998,6 +1002,38 @@ notes:
 
 metadata:
   payment_apis:
+    installment_system:
+      description: |
+        To make payments more accessible for students, the system uses a 2-installment
+        payment plan based on lesson progress:
+        - When a student books a group, TWO installment invoices are automatically created
+        - Each installment is 50% of the total group price
+        - Payment milestones are based on lesson numbers:
+          * First installment: Must be paid by the midpoint lesson (e.g., lesson 36 if total is 72)
+          * Second installment: Must be paid by the final lesson (e.g., lesson 72)
+        - Students can pay installments separately at their convenience
+        - Payment is tied to lesson progress, not dates, allowing flexibility for rescheduled lessons
+        - Both installments must be paid for full course access
+      
+      lesson_and_date_information: |
+        - Administrators set total_lessons (e.g., 72 lessons) for each group
+        - When starting_date and total_lessons are set, finish_date is automatically calculated
+        - Finish date calculation is based on lesson schedule:
+          * Mon/Wed/Fri groups: Lessons on Monday, Wednesday, Friday (3 per week)
+          * Tue/Thu/Sat groups: Lessons on Tuesday, Thursday, Saturday (3 per week)
+        - Current lesson number is tracked from attendance records
+        - Students can see: finish_date, total_lessons, and current_lesson_number in group information
+      
+      example:
+        group_price: 3000000
+        total_lessons: 72
+        installment_1:
+          amount: 1500000
+          payment_milestone_lesson: 36
+        installment_2:
+          amount: 1500000
+          payment_milestone_lesson: 72
+    
     list_invoices:
       method: "GET"
       path: "/api/v1/payment/invoices/"
@@ -1023,10 +1059,25 @@ metadata:
               student_phone: { type: "string" }
               group: { type: "integer" }
               group_name: { type: "string" }
-              amount: { type: "string", format: "decimal" }
+              amount: { type: "string", format: "decimal", description: "Installment amount (50% of total)" }
+              total_amount: { type: "string", format: "decimal", nullable: true, description: "Total group price" }
+              installment_number: { type: "integer", nullable: true, enum: [1, 2], description: "Installment number (1 or 2)" }
+              is_installment: { type: "boolean", description: "Whether this is an installment invoice" }
+              related_invoice_id: { type: "integer", nullable: true, description: "ID of the other installment invoice" }
               status: { type: "string", enum: ["created", "pending", "paid", "cancelled", "refunded", "expired"] }
               status_display: { type: "string" }
               is_paid: { type: "boolean" }
+              payment_progress:
+                type: "object"
+                description: "Payment progress information for installment invoices"
+                properties:
+                  is_installment: { type: "boolean" }
+                  installment_1_paid: { type: "boolean", nullable: true }
+                  installment_2_paid: { type: "boolean", nullable: true }
+                  total_amount: { type: "number" }
+                  paid_amount: { type: "number" }
+                  remaining_amount: { type: "number" }
+                  all_paid: { type: "boolean", nullable: true }
               multicard_uuid: { type: "string", nullable: true }
               multicard_invoice_id: { type: "string", nullable: true }
               checkout_url: { type: "string", format: "uri", nullable: true }
@@ -1071,10 +1122,25 @@ metadata:
             student_phone: { type: "string" }
             group: { type: "integer" }
             group_name: { type: "string" }
-            amount: { type: "string", format: "decimal" }
+            amount: { type: "string", format: "decimal", description: "Installment amount (50% of total)" }
+            total_amount: { type: "string", format: "decimal", nullable: true, description: "Total group price" }
+            installment_number: { type: "integer", nullable: true, enum: [1, 2], description: "Installment number (1 or 2)" }
+            is_installment: { type: "boolean", description: "Whether this is an installment invoice" }
+            related_invoice_id: { type: "integer", nullable: true, description: "ID of the other installment invoice" }
             status: { type: "string" }
             status_display: { type: "string" }
             is_paid: { type: "boolean" }
+            payment_progress:
+              type: "object"
+              description: "Payment progress information for installment invoices"
+              properties:
+                is_installment: { type: "boolean" }
+                installment_1_paid: { type: "boolean", nullable: true }
+                installment_2_paid: { type: "boolean", nullable: true }
+                total_amount: { type: "number" }
+                paid_amount: { type: "number" }
+                remaining_amount: { type: "number" }
+                all_paid: { type: "boolean", nullable: true }
             multicard_uuid: { type: "string", nullable: true }
             multicard_invoice_id: { type: "string", nullable: true }
             checkout_url: { type: "string", format: "uri", nullable: true }
@@ -1317,10 +1383,54 @@ metadata:
       - "expired: Invoice expired"
     
     automatic_invoice_generation:
-      description: "Invoices are automatically generated when a student books a group (student.group is set) and the group has a price set (price > 0)."
+      description: |
+        Two installment invoices are automatically generated when:
+        1. A student books a group (student.group is set)
+        2. The group has a price set (price > 0)
+      
+      installment_details: |
+        Each installment invoice:
+        - Represents 50% of the total group price
+        - Has a payment_milestone_lesson indicating when payment is required:
+          * First installment: milestone = midpoint lesson (e.g., lesson 36 if total is 72)
+          * Second installment: milestone = final lesson (e.g., lesson 72)
+        - Can be paid independently
+        - Payment is required before reaching the milestone lesson
+      
+      example:
+        group_price: 3000000
+        total_lessons: 72
+        invoice_1:
+          amount: 1500000
+          payment_milestone_lesson: 36
+        invoice_2:
+          amount: 1500000
+          payment_milestone_lesson: 72
+        note: "Students can continue lessons before the milestone, but must pay before reaching it"
     
     automatic_price_updates:
-      description: "When a group's price changes, unpaid invoices (created/pending status) are automatically updated with the new price. Paid invoices are NOT updated (amount remains as paid)."
+      description: |
+        When a group's price changes:
+        - Unpaid installment invoices (created/pending status) are automatically updated
+          with the new price, maintaining the 50/50 split
+        - Both installments are updated proportionally
+        - Paid invoices are NOT updated (amount remains as paid)
+    
+    payment_progress_tracking:
+      description: |
+        Each installment invoice includes a payment_progress object that shows:
+        - is_installment: true (indicates this is an installment invoice)
+        - installment_1_paid: boolean (whether first installment is paid)
+        - installment_2_paid: boolean (whether second installment is paid)
+        - total_amount: float (total group price)
+        - paid_amount: float (sum of all paid installments)
+        - remaining_amount: float (amount still to be paid)
+        - all_paid: boolean (whether both installments are paid)
+        - payment_milestone_lesson: integer (lesson number by which this installment must be paid)
+        - second_milestone_lesson: integer (lesson number for the other installment)
+        - current_lesson: integer (current lesson number from attendance records)
+        - total_lessons: integer (total number of lessons in the group)
+        - lessons_remaining: integer (number of lessons remaining)
 
   last_updated: "2026-01-12"
   apis_documented:
