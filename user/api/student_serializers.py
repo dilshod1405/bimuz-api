@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from django.core.validators import RegexValidator
 from user.models import User, Student, Source
 from user.api.exceptions import EmployeeAlreadyExistsError
 
@@ -14,13 +15,27 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     passport_serial_number = serializers.CharField(required=True, max_length=20)
     birth_date = serializers.DateField(required=True)
     source = serializers.ChoiceField(choices=Source.choices, required=True)
+    address = serializers.CharField(required=True, allow_blank=False, help_text='Student full address')
+    inn = serializers.CharField(
+        required=True,
+        max_length=9,
+        allow_blank=False,
+        help_text='Individual Taxpayer Identification Number (maksimum 9 ta raqam)',
+        validators=[
+            RegexValidator(
+                regex=r'^\d{1,9}$',
+                message="INN faqat raqamlardan iborat bo'lishi kerak va maksimum 9 ta belgi bo'lishi kerak."
+            )
+        ]
+    )
+    pinfl = serializers.CharField(required=True, max_length=14, allow_blank=False, help_text='Personal Identification Number of Physical Person')
     
     class Meta:
         model = Student
         fields = [
             'email', 'password', 'password_confirm',
             'full_name', 'phone', 'passport_serial_number',
-            'birth_date', 'source'
+            'birth_date', 'source', 'address', 'inn', 'pinfl'
         ]
     
     def validate_email(self, value):
@@ -84,6 +99,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             'id', 'email', 'first_name', 'last_name',
             'full_name', 'phone', 'passport_serial_number',
             'birth_date', 'source', 'source_display',
+            'address', 'inn', 'pinfl',
             'group', 'certificate', 'contract', 'contract_url',
             'contract_signed', 'created_at', 'updated_at'
         ]

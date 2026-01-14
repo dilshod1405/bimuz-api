@@ -86,6 +86,9 @@ class StudentAdmin(admin.ModelAdmin):
         'phone',
         'passport_serial_number',
         'birth_date',
+        'address',
+        'inn',
+        'pinfl',
         'get_source_display',
         'group_link',
         'contract_status',
@@ -100,7 +103,7 @@ class StudentAdmin(admin.ModelAdmin):
         'group',
         'contract_signed'
     )
-    search_fields = ('full_name', 'phone', 'passport_serial_number')
+    search_fields = ('full_name', 'phone', 'passport_serial_number', 'inn', 'pinfl', 'address')
     readonly_fields = (
         'created_at',
         'updated_at',
@@ -116,13 +119,17 @@ class StudentAdmin(admin.ModelAdmin):
         (_('Personal Information'), {
             'fields': ('full_name', 'phone', 'passport_serial_number', 'birth_date', 'source')
         }),
+        (_('Address and Requisites'), {
+            'fields': ('address', 'inn', 'pinfl'),
+            'description': 'Student address and identification numbers required for contract generation.'
+        }),
         (_('Booking Information'), {
             'fields': ('group', 'booking_status'),
             'description': 'Group assignment represents the student\'s booking. When a student is assigned to a group, an invoice is automatically generated.'
         }),
         (_('Contract Information'), {
             'fields': ('contract', 'contract_link', 'contract_signed'),
-            'description': 'Contract PDF file and signing status. Contract is generated during student registration.'
+            'description': 'Contract PDF file and signing status. Contract is generated when student books a group.'
         }),
         (_('Certificate Information'), {
             'fields': ('certificate', 'certificate_link'),

@@ -289,3 +289,8 @@ MULTICARD_CALLBACK_URL = config('MULTICARD_CALLBACK_URL', default='')
 # Set this to your public domain (e.g., https://api.yourdomain.com)
 # For development with ngrok: https://your-ngrok-url.ngrok.io
 BASE_URL = config('BASE_URL', default='')
+
+# Contract Electronic Stamp Configuration
+# Path to electronic stamp image (PNG format)
+# Place stamp.png in static/ directory or media/ directory
+CONTRACT_STAMP_PATH = config('CONTRACT_STAMP_PATH', default='')

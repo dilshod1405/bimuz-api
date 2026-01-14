@@ -21,7 +21,7 @@ from user.api.utils import (
     error_response
 )
 from user.api.exceptions import EmployeeNotFoundError
-from user.api.contract_generator import generate_student_contract
+# Contract generation moved to booking views - contract is created when student books a group
 from user.api.tasks import generate_and_send_verification_code
 from user.api.redis_utils import verify_code, get_verification_code, delete_verification_code
 
@@ -68,14 +68,8 @@ class StudentRegistrationView(generics.CreateAPIView):
         with transaction.atomic():
             student = serializer.save()
             
-            # Generate contract PDF
-            contract_buffer = generate_student_contract(student)
-            contract_filename = f'contract_{student.id}_{student.created_at.strftime("%Y%m%d")}.pdf'
-            student.contract.save(
-                contract_filename,
-                ContentFile(contract_buffer.read()),
-                save=True
-            )
+            # Contract will be generated when student books a group, not during registration
+            # Generate contract PDF - REMOVED: Contract is now generated when student books a group
             
             # Normalize phone number for SMS
             normalized_phone = self._normalize_phone(student.phone)
@@ -124,7 +118,7 @@ class StudentRegistrationView(generics.CreateAPIView):
         
         return success_response(
             data=response_data,
-            message='Talaba muvaffaqiyatli ro\'yxatdan o\'tdi. Shartnoma yaratildi. Tasdiqlash kodi SMS orqali yuborildi.',
+            message='Talaba muvaffaqiyatli ro\'yxatdan o\'tdi. Tasdiqlash kodi SMS orqali yuborildi. Shartnoma guruh tanlaganingizdan keyin yaratiladi.',
             status_code=status.HTTP_201_CREATED
         )
 

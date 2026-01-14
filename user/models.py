@@ -128,6 +128,10 @@ class Student(BaseModel):
         regex=r'^\+?1?\d{9,13}$',
         message="Telefon raqami '+999999999' formatida kiritilishi kerak. Maksimal 13 raqam."
     )
+    inn_regex = RegexValidator(
+        regex=r'^\d{1,9}$',
+        message="INN faqat raqamlardan iborat bo'lishi kerak va maksimum 9 ta belgi bo'lishi kerak."
+    )
     
     user = models.OneToOneField(
         User,
@@ -180,7 +184,28 @@ class Student(BaseModel):
         verbose_name='Contract Signed',
         help_text='Whether the contract has been electronically signed'
     )
-
+    address = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Address',
+        help_text='Student full address (tuman, ko\'cha, uy)'
+    )
+    inn = models.CharField(
+        max_length=9,
+        null=True,
+        blank=True,
+        validators=[inn_regex],
+        verbose_name='INN',
+        help_text='Individual Taxpayer Identification Number (maksimum 9 ta raqam)'
+    )
+    pinfl = models.CharField(
+        max_length=14,
+        null=True,
+        blank=True,
+        verbose_name='PINFL',
+        help_text='Personal Identification Number of Physical Person'
+    )
+                                
     class Meta:  # type: ignore
         db_table = 'students'
         verbose_name = 'Student'

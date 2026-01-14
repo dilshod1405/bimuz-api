@@ -2,8 +2,12 @@ from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
+from django.core.files.base import ContentFile
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import logging
+import os
+import shutil
 
 from education.models import Group
 from user.models import Student
@@ -16,6 +20,9 @@ from education.api.booking_serializers import (
 from education.api.permissions import IsAdministratorOrMentor
 from education.api.utils import success_response, error_response
 from payment.models import Invoice, InvoiceStatus
+from user.api.contract_generator import generate_student_contract
+
+logger = logging.getLogger(__name__)
 
 
 class GroupBookingListView(generics.ListAPIView):
@@ -107,6 +114,46 @@ class StudentBookingCreateView(generics.CreateAPIView):
                 student.group = group
                 student.save()
                 
+                # Generate contract PDF based on selected group
+                try:
+                    contract_buffer = generate_student_contract(student)
+                    contract_filename = f'contract_{student.id}_{group.id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+                    
+                    # If student has an old contract, save it with cancelled suffix for history
+                    # Note: Paid invoices are preserved and not affected by contract regeneration
+                    if student.contract:
+                        old_contract_path = student.contract.path if hasattr(student.contract, 'path') else None
+                        old_contract_name = student.contract.name
+                        # Create cancelled version name
+                        if '_cancelled' not in old_contract_name:
+                            cancelled_name = old_contract_name.replace('.pdf', '_cancelled.pdf')
+                            # Copy old contract to cancelled version (if file exists)
+                            if old_contract_path and os.path.exists(old_contract_path):
+                                import shutil
+                                cancelled_path = os.path.join(
+                                    os.path.dirname(old_contract_path),
+                                    os.path.basename(cancelled_name)
+                                )
+                                try:
+                                    shutil.copy2(old_contract_path, cancelled_path)
+                                    logger.info(f"Old contract saved as cancelled: {cancelled_name}")
+                                except Exception as copy_error:
+                                    logger.warning(f"Could not copy old contract: {str(copy_error)}")
+                    
+                    # Save new contract
+                    student.contract.save(
+                        contract_filename,
+                        ContentFile(contract_buffer.read()),
+                        save=True
+                    )
+                    # Reset contract_signed status since it's a new contract
+                    student.contract_signed = False
+                    student.save()
+                    logger.info(f"Contract generated for student {student.id} and group {group.id}")
+                except Exception as e:
+                    logger.error(f"Failed to generate contract for student {student.id} and group {group.id}: {str(e)}")
+                    # Don't fail the booking if contract generation fails, but log the error
+                
                 # Calculate payment information based on group price
                 group_price = float(group.price) if group.price else 0
                 first_installment = group_price / 2 if group_price > 0 else 0
@@ -189,13 +236,20 @@ class StudentBookingCreateView(generics.CreateAPIView):
                 
                 group_serializer = GroupBookingSerializer(group, context={'request': request})
                 
+                # Get contract URL if contract exists
+                contract_url = None
+                if student.contract:
+                    contract_url = request.build_absolute_uri(student.contract.url) if request else student.contract.url
+                
                 return success_response(
                     data={
                         'booking': {
                             'student_id': student.id,
                             'student_name': student.full_name,
                             'group': group_serializer.data,
-                            'payment_info': payment_info
+                            'payment_info': payment_info,
+                            'contract_url': contract_url,
+                            'contract_signed': student.contract_signed
                         }
                     },
                     message='Talaba muvaffaqiyatli guruhga yozildi.',
@@ -447,36 +501,97 @@ class StudentGroupChangeView(generics.GenericAPIView):
                 student.group = new_group
                 student.save()
                 
+                # Generate new contract PDF based on new group
+                # IMPORTANT: Paid invoices are preserved and not affected by contract regeneration
+                # Only unpaid invoices are cancelled, paid invoices remain in the system
+                try:
+                    contract_buffer = generate_student_contract(student)
+                    contract_filename = f'contract_{student.id}_{new_group.id}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+                    
+                    # Save old contract with cancelled suffix for history
+                    if student.contract:
+                        old_contract_path = student.contract.path if hasattr(student.contract, 'path') else None
+                        old_contract_name = student.contract.name
+                        # Create cancelled version name
+                        if '_cancelled' not in old_contract_name:
+                            cancelled_name = old_contract_name.replace('.pdf', '_cancelled.pdf')
+                            # Copy old contract to cancelled version (if file exists)
+                            if old_contract_path and os.path.exists(old_contract_path):
+                                cancelled_path = os.path.join(
+                                    os.path.dirname(old_contract_path),
+                                    os.path.basename(cancelled_name)
+                                )
+                                try:
+                                    shutil.copy2(old_contract_path, cancelled_path)
+                                    logger.info(f"Old contract saved as cancelled: {cancelled_name} (Group change: {old_group.id} -> {new_group.id})")
+                                except Exception as copy_error:
+                                    logger.warning(f"Could not copy old contract: {str(copy_error)}")
+                    
+                    # Save new contract
+                    student.contract.save(
+                        contract_filename,
+                        ContentFile(contract_buffer.read()),
+                        save=True
+                    )
+                    # Reset contract_signed status since it's a new contract
+                    student.contract_signed = False
+                    student.save()
+                    logger.info(f"New contract generated for student {student.id} after group change from {old_group.id} to {new_group.id}. "
+                               f"Paid invoices preserved: {total_paid} UZS from old group.")
+                except Exception as e:
+                    logger.error(f"Failed to generate contract for student {student.id} after group change: {str(e)}")
+                    # Don't fail the group change if contract generation fails, but log the error
+                
                 # Handle price differences
+                # IMPORTANT: Paid invoices are preserved and not cancelled
+                # Only unpaid invoices are cancelled
                 refund_amount = 0
                 new_invoice_amount = 0
                 new_invoice_id = None
                 
                 if price_difference > 0:
-                    # New group is more expensive - create invoice for difference
-                    # Calculate first installment (50% of new price)
-                    first_installment = new_price / 2
-                    new_invoice_amount = first_installment
+                    # New group is more expensive
+                    # Calculate how much student still needs to pay
+                    # Student has already paid total_paid for old group
+                    # New group costs new_price, so student needs to pay: new_price - total_paid
+                    remaining_amount = new_price - total_paid
                     
-                    # Create new invoice for first installment
-                    new_invoice = Invoice.objects.create(
-                        student=student,
-                        group=new_group,
-                        amount=new_invoice_amount,
-                        status=InvoiceStatus.CREATED,
-                        notes=f"First installment (50%) for group change. Old group: {old_group.id}, New group: {new_group.id}. "
-                              f"Price difference: +{price_difference} UZS. Total paid for old group: {total_paid} UZS."
-                    )
-                    new_invoice_id = new_invoice.id
+                    if remaining_amount > 0:
+                        # Student needs to pay more
+                        # Create invoice for first installment (50% of new price) or remaining amount, whichever is less
+                        first_installment = new_price / 2
+                        new_invoice_amount = min(first_installment, remaining_amount)
+                        
+                        new_invoice = Invoice.objects.create(
+                            student=student,
+                            group=new_group,
+                            amount=new_invoice_amount,
+                            status=InvoiceStatus.CREATED,
+                            notes=f"First installment for group change. Old group: {old_group.id} ({old_price} UZS), "
+                                  f"New group: {new_group.id} ({new_price} UZS). "
+                                  f"Price difference: +{price_difference} UZS. "
+                                  f"Total paid for old group: {total_paid} UZS. "
+                                  f"Remaining to pay: {remaining_amount} UZS. "
+                                  f"Paid invoices from old group are preserved."
+                        )
+                        new_invoice_id = new_invoice.id
+                    else:
+                        # Student has already paid enough (or more than enough)
+                        # No new invoice needed, but note the excess payment
+                        if total_paid > new_price:
+                            refund_amount = total_paid - new_price
+                            logger.info(f"Student {student.id} has overpaid. Refund needed: {refund_amount} UZS")
                     
                 elif price_difference < 0:
-                    # New group is cheaper - calculate refund amount
-                    refund_amount = abs(price_difference)
-                    # If student paid more than new group price, refund the excess
+                    # New group is cheaper
+                    # Calculate refund amount
                     if total_paid > new_price:
+                        # Student paid more than new group price - refund the excess
                         refund_amount = total_paid - new_price
+                        logger.info(f"Student {student.id} paid {total_paid} UZS for old group, new group costs {new_price} UZS. "
+                                   f"Refund needed: {refund_amount} UZS")
                     else:
-                        # Student hasn't paid enough, but new group is cheaper
+                        # Student hasn't paid enough for new group yet
                         # Create invoice for first installment of new group
                         first_installment = new_price / 2
                         new_invoice_amount = first_installment
@@ -486,25 +601,43 @@ class StudentGroupChangeView(generics.GenericAPIView):
                             group=new_group,
                             amount=new_invoice_amount,
                             status=InvoiceStatus.CREATED,
-                            notes=f"First installment (50%) for group change. Old group: {old_group.id}, New group: {new_group.id}. "
-                                  f"Price difference: {price_difference} UZS (cheaper). Total paid for old group: {total_paid} UZS. "
-                                  f"Refund amount: {refund_amount} UZS."
+                            notes=f"First installment (50%) for group change. Old group: {old_group.id} ({old_price} UZS), "
+                                  f"New group: {new_group.id} ({new_price} UZS). "
+                                  f"Price difference: {price_difference} UZS (cheaper). "
+                                  f"Total paid for old group: {total_paid} UZS. "
+                                  f"Paid invoices from old group are preserved."
                         )
                         new_invoice_id = new_invoice.id
                 else:
-                    # Same price - just create first installment invoice
-                    first_installment = new_price / 2
-                    new_invoice_amount = first_installment
-                    
-                    new_invoice = Invoice.objects.create(
-                        student=student,
-                        group=new_group,
-                        amount=new_invoice_amount,
-                        status=InvoiceStatus.CREATED,
-                        notes=f"First installment (50%) for group change. Old group: {old_group.id}, New group: {new_group.id}. "
-                              f"Same price. Total paid for old group: {total_paid} UZS."
-                    )
-                    new_invoice_id = new_invoice.id
+                    # Same price
+                    # Check if student has paid enough
+                    if total_paid < new_price:
+                        # Student still needs to pay
+                        first_installment = new_price / 2
+                        remaining = new_price - total_paid
+                        new_invoice_amount = min(first_installment, remaining)
+                        
+                        new_invoice = Invoice.objects.create(
+                            student=student,
+                            group=new_group,
+                            amount=new_invoice_amount,
+                            status=InvoiceStatus.CREATED,
+                            notes=f"First installment for group change. Old group: {old_group.id}, New group: {new_group.id}. "
+                                  f"Same price ({new_price} UZS). Total paid for old group: {total_paid} UZS. "
+                                  f"Remaining to pay: {remaining} UZS. "
+                                  f"Paid invoices from old group are preserved."
+                        )
+                        new_invoice_id = new_invoice.id
+                    else:
+                        # Student has already paid enough
+                        if total_paid > new_price:
+                            refund_amount = total_paid - new_price
+                            logger.info(f"Student {student.id} has overpaid. Refund needed: {refund_amount} UZS")
+                
+                # Get contract URL if contract exists
+                contract_url = None
+                if student.contract:
+                    contract_url = request.build_absolute_uri(student.contract.url) if request else student.contract.url
                 
                 response_data = {
                     'student_id': student.id,
@@ -519,7 +652,9 @@ class StudentGroupChangeView(generics.GenericAPIView):
                     'total_paid_old_group': total_paid,
                     'cancelled_invoices': cancelled_count,
                     'new_invoice_id': new_invoice_id,
-                    'new_invoice_amount': new_invoice_amount
+                    'new_invoice_amount': new_invoice_amount,
+                    'contract_url': contract_url,
+                    'contract_signed': student.contract_signed
                 }
                 
                 if refund_amount > 0:
@@ -531,7 +666,7 @@ class StudentGroupChangeView(generics.GenericAPIView):
                 
                 return success_response(
                     data=response_data,
-                    message='Guruh muvaffaqiyatli o\'zgartirildi.',
+                    message='Guruh muvaffaqiyatli o\'zgartirildi. Yangi shartnoma yaratildi.',
                     status_code=status.HTTP_200_OK
                 )
                 

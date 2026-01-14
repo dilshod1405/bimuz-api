@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 25mm 25mm 25mm;
+        }
+
+        body {
+            font-family: "Times New Roman", "Liberation Serif", serif;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #000;
+        }
+
+        h1 { 
+            font-size: 22px; 
+            text-align: center; 
+            font-weight: bold; 
+            margin: 10px 0; 
+        }
+        
+        h2 { 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin: 16px 0 8px 0; 
+            text-align: center;
+        }
+        
+        h3 { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin: 10px 0 4px 0; 
+        }
+        
+        p { 
+            margin: 5px 0; 
+            text-align: justify; 
+        }
+
+        .rekvizit-flex {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            margin-top: 40px;
+            page-break-before: always;
+        }
+
+        .rekv-block { 
+            width: 48%; 
+        }
+
+        .rekv-block h3 {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .rekv-block p {
+            margin: 4px 0;
+            text-align: left;
+        }
+
+        .rekv-block b {
+            font-weight: bold;
+        }
+
+        .signature-block {
+            margin-top: 50px;
+            page-break-inside: avoid;
+        }
+
+        .signature-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-end;
+            flex-direction: column;
+        }
+
+        .stamp-box {
+            text-align: center;
+            width: 220px;
+            margin-left: auto;
+        }
+
+        .stamp-box img {
+            width: 3.5cm;
+            height: 3.5cm;
+            opacity: 0.88;
+            margin-bottom: 10px;
+        }
+
+        .director-title {
+            font-size: 13.5px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .director-name {
+            font-size: 14px;
+            margin: 4px 0 0 0;
+        }
+
+        .contract-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .contract-number {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .contract-date {
+            font-size: 13px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="contract-header">
+        <h1>{{ contract_number }} -sonli shartnomasi</h1>
+        <p class="contract-date">Toshkent shahri<br/>{{ contract_date }}</p>
+    </div>
+
+    <p>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>"BIM SARVAR SADULLAYEV" MChJ</b> nomidan Nizom asosida ish olib boruvchi direktor 
+        <b>Sa'dullayev Sarvar Anvar o'g'li</b>, keyinchalik <b>"O'quv markaz"</b> yoki <b>"taraf"</b> deb ataladi, 
+        bir tomondan<br/><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        fuqaro <b>{{ student_full_name }}</b>, 
+        keyinchalik <b>"Tinglovchi"</b> yoki <b>"taraf"</b> deb ataladi ikkinchi tomondan, 
+        keyinchalik birgalikda <b>"Taraflar"</b> deb ataladi, quyidagilar haqida ushbu shartnomani tuzdik:
+    </p>
+
+    <h2>SHARTNOMA PREDMETI.</h2>
+
+    <p>
+        1.1 O'quv markaz, oldindan kelishib olingan mavzular bo'yicha ushbu shartnomada belgilangan 
+        muddatlarda quyidagi o'quv amaliyoti xizmatlarini ko'rsatishni o'z zimmasiga oladi:<br/>
+        <b>{{ speciality_display }}</b> dasturi imkoniyatlari haqida lektsiya va amaliyot jarayonlarini o'tkazish;<br/>
+        BIM-texnologiyasi asosida, <b>{{ speciality_display }}</b> dasturini, tinglovchiga o'rgatish.<br/>
+        <b>{{ speciality_display }}</b> dasturi imkoniyatlarini kengroq yoritib berish.
+    </p>
+
+    <p>
+        1.2 O'quv markaz ushbu shartnomaning 1.1.-bandida belgilangan xizmatlarni ko'rsatish uchun 
+        zarur malakaga ega o'qituvchilari dars o'tishiga kafolat beradi.
+    </p>
+
+    <p>
+        1.3. Ushbu shartnomaning 1.1.- bandida belgilangan xizmatlar 
+        <b>{{ starting_date }}</b> yildan <b>{{ finish_date }}</b> yilgacha bo'lgan davrda, 
+        haftada 3 marta, har bir mashg'ulot 80 daqiqadan o'tkaziladi. 
+        Jami darslar soni: <b>{{ total_lessons }}</b> ta.
+    </p>
+
+    <h2>2. TO'LOV QIYMATI VA TARTIBI.</h2>
+
+    <p>
+        2.1 Ushbu shartnomaning 1.3.-bandiga muvofiq o'tkazilgan konsultatsiyalar natijalari asosida, 
+        xizmatlar narxi <b>{{ total_price_formatted }}</b> 
+        (<b>{{ total_price_words }}</b>) so'mni tashkil etadi.
+    </p>
+
+    <p>
+        2.2 Umumiy hisobda jami <b>{{ total_lessons }}</b> ta dars o'tiladi.
+    </p>
+
+    <p>
+        2.3 To'lov Tinglovchi tomonidan ikki hisobga bo'lib amalga oshiriladi. 
+        To'lov quyidagi grafik orqali amalga oshiriladi:
+    </p>
+
+    <p>
+        <b>1-yarmi:</b> {{ midpoint_lesson }}-darsgacha (ya'ni {{ midpoint_lesson }} ta darsgacha) 
+        <b>{{ first_installment_formatted }}</b> 
+        (<b>{{ first_installment_words }}</b>) so'm. 
+        To'lov kursi boshlanishida amalga oshiriladi.
+    </p>
+
+    <p>
+        <b>2-yarmi:</b> {{ second_half_start }}-darsdan {{ total_lessons }}-darsgacha 
+        (ya'ni {{ second_half_lessons }} ta dars uchun) 
+        <b>{{ second_installment_formatted }}</b> 
+        (<b>{{ second_installment_words }}</b>) so'm. 
+        To'lov {{ midpoint_lesson }}-dars o'tilgandan keyin amalga oshiriladi.
+    </p>
+
+    <p>
+        2.4 Kurs davomida xizmat narxi bir tomonlama oshirilmaydi. 
+        Narx faqat Taraflarning o'zaro kelishuvi asosida o'zgartirilishi mumkin.
+    </p>
+
+    <h2>3. TINGLOVCHINING HUQUQ VA MAJBURIYATLARI.</h2>
+
+    <h3>3.1 Tinglovchi quyidagi majburiyatlarni o'z zimmasiga oladi:</h3>
+
+    <p>3.1.1 Shartnomaning 2.2 bandidagi to'lovlarni o'z vaqtida kechiktirmasdan, grafik bo'yicha o'z vaqtida to'lash</p>
+    <p>3.1.2 Bepul 1 marta ochiq dars va 1 marta lektsiya darsiga kirish huquqiga ega. Keyingi darslarga kirish uchun to'lovni 100% amalga oshirgach darslarga ruxsat beriladi.</p>
+    <p>3.1.3 Tinglovchi o'z vaqtida belgilangan vaqt oralig'ida dars o'tkaziladigan joyga yetib kelishi. Hamda o'zi bilan asbob (noutbuk) uskunalarni shay holatda bo'lishini ta'minlashi.</p>
+    <p>3.1.4 Har yangi oy boshida to'lovni 100% oldindan amalga oshirishi kerak.</p>
+    <p>3.1.5 Belgilangan vaqt oralig'ida dars o'tkaziladigan joyga yetib kelmaslik va darsni o'tkazib yuborishlik, Tinglovchining dars olish uchun belgilangan kiyimatini, O'quv markazga to'lashdan ozod qilmaydi. Tinglovchi tomonidan o'tkazib yuborilgan darslar. Qaytadan o'tkazilmaydi. Qaytadan darslarni o'tkazish faqat Tomonlarning o'zaro kelishuvi asosida qo'shimcha haq evaziga amalga oshiriladi.</p>
+    <p>3.1.6 To'lovni o'z vaqtida to'lamaslik, Tinglovchining darslarga kirishiga cheklov qo'yilishiga olib keladi. Muddati o'tgan har bir kun uchun 0.1% penya to'lashi kerak bo'ladi.</p>
+
+    <h3>3.2 Tinglovchi quyidagi huquqlarga ega:</h3>
+
+    <p>3.2.1 O'quv markazdan ushbu shartnoma bo'yicha xizmatlarni ko'rsatish jarayoni haqida zarur ma'lumotlarni taqdim etishni talab qilish.</p>
+    <p>3.1.8 Tinglovchi, shartnomaga muvofiq Konsultant tomonidan o'z vaqtida yoki sifatli xizmat ko'rsatmasa, Konsultant tomonidan faqat haqiqatda ko'rsatilgan xizmatlar haqini to'laydi.</p>
+
+    <h2>4. O'QUV MARKAZINING MAJBURIYATLARI.</h2>
+
+    <h3>4.1 O'quv markazi quyidagi majburiyatlarni o'z zimmasiga oladi:</h3>
+
+    <p>4.1.1 Ushbu shartnoma bo'yicha har bir o'quv guruhiga biriktirilgan o'qituvchi orqali sifatli va belgilangan muddatda xizmat ko'rsatish.</p>
+    <p>4.1.2 Kelgusida xizmatlarni ko'rsatish uchun xalaqit beradigan yoki imkonsiz holatlar yuzaga kelganida, O'quv markazi bu haqda Tinglovchini darhol (ular paydo bo'lgan vaqtdan boshlab bir kundan kechikmasdan) xabardor qilishi shart.</p>
+    <p>4.1.3 O'quv markazi tomonidan o'tilishi kerak bo'lgan dars bekor qilinsa, o'tilmagan dars o'rnini qoplash</p>
+
+    <h2>5. TARAFLARNING JAVOBGARLIGI.</h2>
+
+    <p>5.1 Ushbu shartnoma bo'yicha majburiyatlarni bajarmaslik yoki lozim darajada bajarmaslik uchun Taraflar amaldagi qonunchilikka muvofiq javobgar bo'ladilar.</p>
+    <p>5.2 Tinglovchi O'quv markaz tomonidan xizmatlarni amalga oshirish jarayonida, shu jumladan maxfiy ma'lumotni suiiste'mol qilish yoki uni oshkor qilish natijasida yetkazilgan barcha zararlarni to'liq qoplashga javobgardir.</p>
+    <p>5.3 Tinglovchi ushbu shartnomaning 2.1., 2.2-bandida belgilangan shartlarni bajarmasligi uchun javobgardir. Tinglovchi to'lovni to'liq yopmasligi, Tinglovchi tomonidan haq to'languncha, Konsultant tomonidan darslarga qatnashishiga cheklov qo'yilishiga sabab bo'ladi.</p>
+    <p>5.4 O'quv markaz belgilangan vaqtlarda va kunlarda xizmat ko'rsatmasligi va xizmat ko'rsatishni kechiktirganligi uchun Tinglovchiga darslarni o'rni qoplash uchun javobgardir</p>
+
+    <h2>6. MAXFIYLIK.</h2>
+
+    <p>
+        6.1 Ushbu shartnomani bajarishda O'quv markazining maxfiy ma'lumotlarini, tijorat siri hisoblangan maxfiy ma'lumotlarini oshkor qilish va uchinchi shaxslarga berish Tinglovchi tomonidan, ushbu shartnomada ko'zda tutilgan alohida hollarda, amaldagi qonunchilikda va lokal normativ-huquqiy hujjatlarda belgilangan tartibda O'quv markaz tijorat siri va boshqa maxfiy ma'lumotlarini saqlash majburiyati bilan amalga oshirilishi shart.
+    </p>
+
+    <h2>7. NIZOLARNI HAL QILISH.</h2>
+
+    <p>7.1 Taraflar ushbu shartnoma bo'yicha kelishmovchiliklar va tushunmovchiliklarni muzokaralar yo'li bilan hal qilish uchun barcha imkoniyatlarini ishga solishga majburdirlar.</p>
+    <p>7.2 Agar kelishmovchiliklar va tushunmovchiliklarni muzokaralar yo'li bilan hal qilishning imkoni bo'lmasa, ular Tinglovchi joylashgan hudud bo'yicha sudda ko'rib chiqiladi.</p>
+
+    <h2>8. AMAL QILISH MUDDATI VA MUDDATIDAN OLDIN BEKOR QILISH.</h2>
+
+    <p>
+        8.1 Shartnomaning muddati __________ 2026-yildan __________ 2026-yilgacha bo'lib, 
+        Taraflar imzolagan kundan e'tiboran kuchga kiradi.
+    </p>
+
+    <p>
+        8.2 O'quv markazi ushbu shartnoma bo'yicha majburiyatlarni bajarishdan bir tomonlama bosh tortish huquqiga ega. 
+        Bunda, O'quv markazi bu haqda shartnomani bekor qilishdan 5 kalendar kun oldin yozma ravishda Tinglovchini ogohlantirishi kerak.
+    </p>
+
+    <p>
+        8.3 Tinglovchi har yangi o'quv oyining birinchi darsidan 5 kun oldin, shartnomadagi kelishuvlarni to'xtatish haqida xabar berishi kerak.
+    </p>
+
+    <h2>9. YAKUNIY QOIDALAR.</h2>
+
+    <p>9.1 Ushbu shartnoma ikki nusxada har bir taraf uchun bittadan tuzilgan va bir xil yuridik kuchga ega.</p>
+    <p>9.2 Shartnomaga har qanday o'zgartirishlar Taraflarning o'zaro kelishuviga ko'ra kiritiladi va qo'shimcha kelishuvlar ko'rinishida yozma shaklda rasmiylashtiriladi.</p>
+    <p>9.3 Ushbu shartnomada ko'zda tutilmagan boshqa holatlarda, Taraflar amaldagi qonunchilik asosida tartibga solinadi.</p>
+
+    <h2>10. TARAFLARNING MANZILLARI VA REKVIZITLARI.</h2>
+
+    <div class="rekvizit-flex">
+        <div class="rekv-block">
+            <h3>O'quv markaz:</h3>
+            <p><b>"BIM SARVAR SADULLAYEV" MChJ</b></p>
+            <p><b>Manzil:</b> Xorazm viloyati., Shovot tumani, Shovot, Zamondosh MFY, ibn-Sino ko'chasi, 1-uy</p>
+            <p><b>Tel:</b> +998-91-984-33-44<br/>+998-99-948-33-44</p>
+            <p><b>x/r:</b> 20208000407361588001</p>
+            <p><b>bank:</b> AJ Milliy Bank, Mirzo Ulug'bek filiali, Mustaqillik kuchasi, 66-uy</p>
+            <p><b>MFO:</b> 00450</p>
+            <p><b>INN:</b> 312 636 823</p>
+            <p><b>OKED:</b> 62 020</p>
+        </div>
+
+        <div class="rekv-block">
+            <h3>Tinglovchi: {{ student_full_name }}</h3>
+            <p><b>{{ student_full_name }}</b></p>
+            <p><b>Manzil:</b> {{ student_address }}</p>
+            <p><b>Tel:</b> {{ student_phone }}</p>
+            <p><b>INN:</b> {{ student_inn }}</p>
+            <p><b>PINFL:</b> {{ student_pinfl }}</p>
+        </div>
+    </div>
+
+    <div class="signature-block">
+        <div class="signature-container">
+            <div class="stamp-box">
+                {% if stamp_url %}
+                <img src="{{ stamp_url }}" alt="Möhür">
+                {% endif %}
+                <div class="director-title">Direktor</div>
+                <div class="director-name">Sa'dullayev.S.A</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
