@@ -1,35 +1,39 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PIP_NO_CACHE_DIR=1
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
+# System libs for WeasyPrint
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     build-essential \
     libpq-dev \
+    libpango-1.0-0 \
+    libcairo2 \
+    libgirepository-1.0-1 \
+    gir1.2-pango-1.0 \
+    gir1.2-harfbuzz-0.0 \
+    libgobject-2.0-0 \
+    libffi-dev \
+    libxml2 \
+    libxslt1.1 \
+    gdk-pixbuf2 \
+    shared-mime-info \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --shell /bin/bash app
-
 COPY requirements.txt /app/
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --root-user-action=ignore -r requirements.txt
 
-COPY --chown=app:app . /app/
+COPY . /app/
 
-COPY --chown=app:app entrypoint.sh /app/entrypoint.sh
-
-RUN mkdir -p /app/staticfiles /app/media && chown -R app:app /app && \
-    chmod +x /app/entrypoint.sh
-
-USER app
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
