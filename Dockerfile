@@ -20,10 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     libxml2 \
     libxslt1.1 \
-    gdk-pixbuf2 \
+    libgdk-pixbuf-2.0-0 \
     shared-mime-info \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
 
 COPY requirements.txt /app/
 
