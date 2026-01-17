@@ -388,19 +388,28 @@ class BookingAPITestCase(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Response can be DRF validation error (no 'success' field) or error_response format
+        # Response can be DRF validation error (field names as keys) or error_response format
         if isinstance(response.data, dict):
             # If it's error_response format, check 'success' field
             if 'success' in response.data:
                 self.assertFalse(response.data.get('success', True))
             # Check message or error details
             message = response.data.get('message', '').lower()
-            errors = response.data.get('errors', {})
+            # In DRF validation errors, errors are directly in response.data (field names as keys)
+            # In error_response format, errors are in response.data['errors']
+            errors = response.data.get('errors', response.data) if 'errors' in response.data else response.data
+            # Extract all error messages
+            all_error_messages = []
+            for field, error_list in errors.items():
+                if isinstance(error_list, list):
+                    all_error_messages.extend([str(err).lower() for err in error_list])
+                else:
+                    all_error_messages.append(str(error_list).lower())
             # Check if message or errors contain 10-day rule info
             has_10_day_rule = (
                 '10-day' in message or '10 day' in message or 'limit' in message or
                 '10 kunlik' in message or 'cheklov' in message or
-                any('10 kunlik' in str(err) or 'cheklov' in str(err) for err_list in errors.values() for err in (err_list if isinstance(err_list, list) else [err_list]))
+                any('10 kunlik' in msg or 'cheklov' in msg for msg in all_error_messages)
             )
             self.assertTrue(has_10_day_rule or 'group_id' in errors, f"Expected 10-day rule error, got: {response.data}")
             if 'data' in response.data and response.data['data']:
@@ -424,19 +433,30 @@ class BookingAPITestCase(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Response can be DRF validation error (no 'success' field) or error_response format
+        # Response can be DRF validation error (field names as keys) or error_response format
         if isinstance(response.data, dict):
             # If it's error_response format, check 'success' field
             if 'success' in response.data:
                 self.assertFalse(response.data.get('success', True))
             # Check message or error details
             message = response.data.get('message', '').lower()
-            errors = response.data.get('errors', {})
+            # In DRF validation errors, errors are directly in response.data (field names as keys)
+            # In error_response format, errors are in response.data['errors']
+            errors = response.data.get('errors', response.data) if 'errors' in response.data else response.data
+            # Extract all error messages
+            all_error_messages = []
+            for field, error_list in errors.items():
+                if field in ['success', 'message', 'data']:
+                    continue
+                if isinstance(error_list, list):
+                    all_error_messages.extend([str(err).lower() for err in error_list])
+                else:
+                    all_error_messages.append(str(error_list).lower())
             # Check if message or errors contain seat availability info
             has_seat_error = (
                 'no available seats' in message or 'full' in message or 'seats' in message or
                 'bo\'sh o\'rin' in message or 'to\'liq' in message or
-                any('o\'rin' in str(err) or 'to\'liq' in str(err) for err_list in errors.values() for err in (err_list if isinstance(err_list, list) else [err_list]))
+                any('o\'rin' in msg or 'to\'liq' in msg for msg in all_error_messages)
             )
             self.assertTrue(has_seat_error or 'group_id' in errors, f"Expected seat availability error, got: {response.data}")
     
@@ -451,19 +471,30 @@ class BookingAPITestCase(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Response can be DRF validation error (no 'success' field) or error_response format
+        # Response can be DRF validation error (field names as keys) or error_response format
         if isinstance(response.data, dict):
             # If it's error_response format, check 'success' field
             if 'success' in response.data:
                 self.assertFalse(response.data.get('success', True))
             # Check message or error details
             message = response.data.get('message', '').lower()
-            errors = response.data.get('errors', {})
+            # In DRF validation errors, errors are directly in response.data (field names as keys)
+            # In error_response format, errors are in response.data['errors']
+            errors = response.data.get('errors', response.data) if 'errors' in response.data else response.data
+            # Extract all error messages
+            all_error_messages = []
+            for field, error_list in errors.items():
+                if field in ['success', 'message', 'data']:
+                    continue
+                if isinstance(error_list, list):
+                    all_error_messages.extend([str(err).lower() for err in error_list])
+                else:
+                    all_error_messages.append(str(error_list).lower())
             # Check if message or errors contain already booked info
             has_already_booked_error = (
                 'already booked' in message or 'already has' in message or
                 'allaqachon yozilgan' in message or 'boshqa guruhga' in message or
-                any('yozilgan' in str(err) for err_list in errors.values() for err in (err_list if isinstance(err_list, list) else [err_list]))
+                any('yozilgan' in msg for msg in all_error_messages)
             )
             self.assertTrue(has_already_booked_error or 'student_id' in errors or 'group_id' in errors, f"Expected already booked error, got: {response.data}")
     
