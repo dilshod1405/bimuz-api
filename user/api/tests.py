@@ -257,7 +257,7 @@ class EmployeeManagementAPITestCase(TestCase):
     
     def test_get_employee_success(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        url = reverse('user_api:employee-detail', kwargs={'pk': self.employee.id})
+        url = reverse('user_api:employee-retrieve-update', kwargs={'pk': self.employee.id})
         response = self.client.get(url)  # type: ignore
         self.assertEqual(response.status_code, status.HTTP_200_OK)  # type: ignore
         if isinstance(response.data, dict):  # type: ignore
@@ -267,7 +267,7 @@ class EmployeeManagementAPITestCase(TestCase):
     
     def test_update_employee_success(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        url = reverse('user_api:employee-detail', kwargs={'pk': self.employee.id})
+        url = reverse('user_api:employee-retrieve-update', kwargs={'pk': self.employee.id})
         data = {
             'role': Role.SALES_AGENT,
             'is_active': False,
@@ -295,7 +295,7 @@ class EmployeeManagementAPITestCase(TestCase):
         )
         
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        url = reverse('user_api:employee-detail', kwargs={'pk': director_employee.id})
+        url = reverse('user_api:employee-retrieve-update', kwargs={'pk': director_employee.id})
         data = {'role': Role.MENTOR}
         response = self.client.patch(url, data, format='json')  # type: ignore
         self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_400_BAD_REQUEST])  # type: ignore
@@ -327,7 +327,7 @@ class EmployeeManagementAPITestCase(TestCase):
         )
         
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(developer_token.access_token)}')
-        url = reverse('user_api:employee-detail', kwargs={'pk': director_employee.id})
+        url = reverse('user_api:employee-retrieve-update', kwargs={'pk': director_employee.id})
         data = {'role': Role.MENTOR}
         response = self.client.patch(url, data, format='json')  # type: ignore
         self.assertEqual(response.status_code, status.HTTP_200_OK)  # type: ignore
