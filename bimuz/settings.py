@@ -10,7 +10,8 @@ SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=list)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
+
 
 
 
