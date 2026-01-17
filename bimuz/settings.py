@@ -120,7 +120,7 @@ AUTH_USER_MODEL = 'user.User'
 
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000',
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173',
     cast=lambda v: [s.strip() for s in v.split(',')] if v else []
 )
 CORS_ALLOW_CREDENTIALS = True
@@ -143,6 +143,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ),
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'NON_FIELD_ERRORS_KEY': 'non_field_errors',
 }
 
 from datetime import timedelta

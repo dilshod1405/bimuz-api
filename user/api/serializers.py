@@ -20,12 +20,13 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
         max_length=255
     )
     avatar = serializers.ImageField(required=False, allow_null=True)
+    is_active = serializers.BooleanField(required=False, default=True)
     
     class Meta:
         model = Employee
         fields = [
             'email', 'first_name', 'last_name', 'password', 'password_confirm',
-            'full_name', 'role', 'professionality', 'avatar'
+            'full_name', 'role', 'professionality', 'avatar', 'is_active'
         ]
     
     def validate_email(self, value):
@@ -47,12 +48,14 @@ class EmployeeRegistrationSerializer(serializers.ModelSerializer):
         email = validated_data.pop('email')
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
+        is_active = validated_data.pop('is_active', True)
         
         user = User.objects.create_user(
             email=email,
             password=password,
             first_name=first_name,
-            last_name=last_name
+            last_name=last_name,
+            is_active=is_active
         )
         
         employee = Employee._default_manager.create(

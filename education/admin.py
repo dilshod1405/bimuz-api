@@ -97,7 +97,13 @@ class GroupAdmin(admin.ModelAdmin):
     def get_speciality_display(self, obj):
         if not obj:
             return ''
-        speciality_name = dict(Speciality.choices).get(obj.speciality_id, obj.speciality_id)
+        # Use Uzbek translations (same as English for speciality)
+        speciality_map = {
+            'revit_architecture': 'Revit Architecture',
+            'revit_structure': 'Revit Structure',
+            'tekla_structure': 'Tekla Structure',
+        }
+        speciality_name = speciality_map.get(obj.speciality_id, obj.speciality_id)
         colors = {
             'revit_architecture': '#3498db',
             'revit_structure': '#e74c3c',
@@ -114,7 +120,12 @@ class GroupAdmin(admin.ModelAdmin):
     def get_dates_display(self, obj):
         if not obj:
             return ''
-        return dict(Dates.choices).get(obj.dates, obj.dates)
+        # Use Uzbek translations for dates
+        dates_map = {
+            'mon_wed_fri': 'Dushanba - Chorshanba - Juma',
+            'tue_thu_sat': 'Seshanba - Payshanba - Shanba',
+        }
+        return dates_map.get(obj.dates, obj.dates)
     get_dates_display.short_description = 'Schedule'
     
     def available_seats_display(self, obj):

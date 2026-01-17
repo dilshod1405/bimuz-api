@@ -24,3 +24,34 @@ class IsAdministratorOrMentor(permissions.BasePermission):
         
         role = request.user.employee_profile.role
         return role in ['administrator', 'mentor', 'dasturchi']
+
+
+class IsDeveloperDirectorOrAdministrator(permissions.BasePermission):
+    """Permission for Developer, Director, Administrator to have full CRUD access"""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        if not hasattr(request.user, 'employee_profile'):
+            return False
+        
+        role = request.user.employee_profile.role
+        return role in ['dasturchi', 'direktor', 'administrator']
+
+
+class CanViewGroups(permissions.BasePermission):
+    """Permission for viewing groups: All employees can view (with filtering for Mentors)"""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        if not hasattr(request.user, 'employee_profile'):
+            return False
+        
+        # All employees can view groups
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Only Developer, Director, Administrator can CRUD
+        role = request.user.employee_profile.role
+        return role in ['dasturchi', 'direktor', 'administrator']

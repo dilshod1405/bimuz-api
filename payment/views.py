@@ -2,6 +2,7 @@ from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,8 @@ from payment.models import Invoice, InvoiceStatus
 from payment.serializers import InvoiceSerializer, CreatePaymentSerializer, PaymentCallbackSerializer
 from payment.multicard_service import multicard_service
 from user.models import Student
+from rest_framework.permissions import IsAuthenticated
+from education.api.permissions import CanViewGroups
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,7 @@ class InvoiceListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Invoice.objects.select_related('student', 'group').all()
+        queryset = Invoice.objects.select_related('student', 'group').all()  # type: ignore
 
         # If user is a student, filter by their invoices
         if hasattr(user, 'student'):
@@ -56,11 +59,11 @@ class InvoiceDetailView(generics.RetrieveAPIView):
     """
     serializer_class = InvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Invoice.objects.select_related('student', 'group').all()
+    queryset = Invoice.objects.select_related('student', 'group').all()  # type: ignore
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Invoice.objects.select_related('student', 'group').all()
+        queryset = Invoice.objects.select_related('student', 'group').all()  # type: ignore
 
         # If user is a student, filter by their invoices
         if hasattr(user, 'student'):
@@ -212,7 +215,7 @@ class CreatePaymentView(generics.GenericAPIView):
                 'message': 'Payment link created successfully'
             }, status=status.HTTP_200_OK)
 
-        except Invoice.DoesNotExist:
+        except ObjectDoesNotExist:
             return Response(
                 {'success': False, 'message': 'Invoice not found.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -279,7 +282,18 @@ def payment_callback(request):
         )
 
     validated_data = serializer.validated_data
-    logger.info(f"Validated callback data: invoice_id={validated_data.get('invoice_id')}, uuid={validated_data.get('uuid')}")
+    # Extract all needed values from validated_data to avoid type checker errors
+    # type: ignore comments needed because type checker doesn't recognize DRF serializer.validated_data as dict
+    invoice_id = validated_data.get('invoice_id')  # type: ignore
+    amount = validated_data.get('amount')  # type: ignore
+    sign = validated_data.get('sign')  # type: ignore
+    callback_uuid = validated_data.get('uuid', '')  # type: ignore
+    receipt_url = validated_data.get('receipt_url', '') or ''  # type: ignore
+    payment_time_str = validated_data.get('payment_time') or ''  # type: ignore
+    payment_method = validated_data.get('ps', '') or ''  # type: ignore
+    card_pan = validated_data.get('card_pan', '') or ''  # type: ignore
+    
+    logger.info(f"Validated callback data: invoice_id={invoice_id}, uuid={callback_uuid}")
 
     # Verify signature
     secret = getattr(settings, 'MULTICARD_SECRET', None)
@@ -294,9 +308,16 @@ def payment_callback(request):
         )
 
     # Verify signature
-    invoice_id_str = str(validated_data['invoice_id'])
-    amount_int = int(validated_data['amount'])
-    sign_str = str(validated_data['sign'])
+    if invoice_id is None or amount is None or sign is None:
+        logger.error("Missing required fields in validated_data")
+        return Response(
+            {'success': False, 'message': 'Неверные данные запроса'},
+            status=status.HTTP_200_OK
+        )
+    
+    invoice_id_str = str(invoice_id)
+    amount_int = int(amount)
+    sign_str = str(sign)
     
     # Debug signature verification
     import hashlib
@@ -333,19 +354,19 @@ def payment_callback(request):
     
     try:
         # First try to find by multicard_invoice_id
-        invoice = Invoice.objects.get(multicard_invoice_id=invoice_id_str)
+        invoice = Invoice.objects.get(multicard_invoice_id=invoice_id_str)  # type: ignore
         logger.info(f"Found invoice {invoice.id} by multicard_invoice_id={invoice_id_str}")
-    except Invoice.DoesNotExist:
+    except ObjectDoesNotExist:
         try:
             # Try to find by invoice ID directly (in case multicard_invoice_id wasn't set)
-            invoice_id_int = int(validated_data['invoice_id'])
-            invoice = Invoice.objects.get(id=invoice_id_int)
+            invoice_id_int = int(invoice_id_str)
+            invoice = Invoice.objects.get(id=invoice_id_int)  # type: ignore
             logger.info(f"Found invoice {invoice.id} by id={invoice_id_int}")
             # Update multicard_invoice_id for future callbacks
             invoice.multicard_invoice_id = invoice_id_str
-        except (Invoice.DoesNotExist, ValueError):
+        except (ObjectDoesNotExist, ValueError):
             logger.error(f"Invoice not found for Multicard invoice_id: {invoice_id_str}")
-            logger.error(f"Available invoices with multicard_invoice_id: {list(Invoice.objects.exclude(multicard_invoice_id__isnull=True).values_list('id', 'multicard_invoice_id'))}")
+            logger.error(f"Available invoices with multicard_invoice_id: {list(Invoice.objects.exclude(multicard_invoice_id__isnull=True).values_list('id', 'multicard_invoice_id'))}")  # type: ignore
             # IMPORTANT: Return HTTP 200 with success: false (message will be shown to user)
             # According to docs: "Не найден инвойс" will be displayed to user
             return Response(
@@ -354,7 +375,6 @@ def payment_callback(request):
             )
 
     # Check idempotency by UUID (if same uuid already processed)
-    callback_uuid = validated_data.get('uuid', '')
     if callback_uuid and invoice.multicard_uuid == callback_uuid and invoice.is_paid:
         logger.info(f"Invoice {invoice.id} already paid with same UUID {callback_uuid}, returning success (idempotency)")
         return Response({'success': True, 'message': 'Payment already processed'}, status=status.HTTP_200_OK)
@@ -367,7 +387,6 @@ def payment_callback(request):
     # Update invoice with payment details
     try:
         # Parse payment_time if provided, otherwise use current time
-        payment_time_str = validated_data.get('payment_time') or ''
         payment_time = timezone.now()
         if payment_time_str and payment_time_str.strip():
             try:
@@ -385,13 +404,13 @@ def payment_callback(request):
                     logger.warning(f"Could not parse payment_time '{payment_time_str}', using current time")
                     payment_time = timezone.now()
         
-        with transaction.atomic():
+        with transaction.atomic():  # type: ignore
             invoice.status = InvoiceStatus.PAID
-            invoice.receipt_url = validated_data.get('receipt_url', '') or ''
+            invoice.receipt_url = receipt_url
             invoice.payment_time = payment_time
-            invoice.payment_method = validated_data.get('ps', '') or ''
-            invoice.card_pan = validated_data.get('card_pan', '') or ''
-            invoice.multicard_uuid = validated_data.get('uuid', invoice.multicard_uuid) or ''
+            invoice.payment_method = payment_method
+            invoice.card_pan = card_pan
+            invoice.multicard_uuid = callback_uuid or invoice.multicard_uuid or ''
             invoice.save(update_fields=[
                 'status', 'receipt_url', 'payment_time', 'payment_method',
                 'card_pan', 'multicard_uuid', 'multicard_invoice_id', 'updated_at'
@@ -462,7 +481,7 @@ def payment_webhook(request):
 
     # Find invoice
     try:
-        invoice = Invoice.objects.get(multicard_invoice_id=invoice_id)
+        invoice = Invoice.objects.get(multicard_invoice_id=invoice_id)  # type: ignore
 
         # Map Multicard status to our status
         status_mapping = {
@@ -476,7 +495,7 @@ def payment_webhook(request):
         new_status = status_mapping.get(status_value, InvoiceStatus.PENDING)
 
         # Update invoice
-        with transaction.atomic():
+        with transaction.atomic():  # type: ignore
             invoice.status = new_status
             invoice.multicard_uuid = uuid
 
@@ -492,7 +511,7 @@ def payment_webhook(request):
 
         return Response({'success': True, 'message': 'Webhook processed successfully'})
 
-    except Invoice.DoesNotExist:
+    except ObjectDoesNotExist:
         logger.error(f"Invoice not found for Multicard invoice_id: {invoice_id}")
         # IMPORTANT: Webhooks should return HTTP 2xx
         return Response(
@@ -542,7 +561,7 @@ class CheckInvoiceStatusView(generics.GenericAPIView):
             )
 
         try:
-            invoice = Invoice.objects.select_related('student').get(id=invoice_id)
+            invoice = Invoice.objects.select_related('student').get(id=invoice_id)  # type: ignore
 
             # Check permissions
             user = request.user
@@ -612,7 +631,7 @@ class CheckInvoiceStatusView(generics.GenericAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        except Invoice.DoesNotExist:
+        except ObjectDoesNotExist:
             return Response(
                 {'success': False, 'message': 'Invoice not found.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -623,3 +642,74 @@ class CheckInvoiceStatusView(generics.GenericAPIView):
                 {'success': False, 'message': f'Internal server error: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class EmployeeInvoiceListView(generics.ListAPIView):
+    """
+    List all invoices for employees.
+    Mentors can see only invoices from their groups.
+    Developer/Director/Administrator can see all invoices.
+    """
+    serializer_class = InvoiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from django.db.models import Q
+        
+        user = self.request.user
+        queryset = Invoice.objects.select_related('student', 'group', 'group__mentor').all()  # type: ignore
+
+        # Only employees can access this view
+        if not hasattr(user, 'employee_profile'):
+            return Invoice.objects.none()
+
+        # If user is Mentor, filter by their groups
+        user_role = user.employee_profile.role
+        if user_role == 'mentor':
+            mentor_employee = user.employee_profile
+            queryset = queryset.filter(group__mentor=mentor_employee)
+        # If user is Developer/Director/Administrator, show all invoices
+
+        # Search functionality
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(student__full_name__icontains=search) |
+                Q(student__phone__icontains=search) |
+                Q(group__speciality_id__icontains=search) |
+                Q(id__icontains=search)
+            )
+
+        # Status filter
+        status_filter = self.request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Ordering
+        ordering = self.request.query_params.get('ordering', '-created_at')
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
+
+    @swagger_auto_schema(
+        operation_description="To'lovlarni ro'yxatlash. Mentor faqat o'z guruhlarining to'lovlarini ko'radi, Dasturchi/Direktor/Administrator barcha to'lovlarni ko'radi.",
+        operation_summary="To'lovlarni Ro'yxatlash",
+        responses={
+            200: openapi.Response('To\'lovlar muvaffaqiyatli yuklandi.', InvoiceSerializer(many=True)),
+        },
+        tags=['Payment']
+    )
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'message': 'To\'lovlar muvaffaqiyatli yuklandi.',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)

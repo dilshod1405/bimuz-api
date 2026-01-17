@@ -5,8 +5,8 @@ from user.models import Student, Speciality
 
 class GroupBookingSerializer(serializers.ModelSerializer):
     """Serializer for group booking with availability info."""
-    speciality_display = serializers.CharField(source='get_speciality_id_display', read_only=True)
-    dates_display = serializers.CharField(source='get_dates_display', read_only=True)
+    speciality_display = serializers.SerializerMethodField()
+    dates_display = serializers.SerializerMethodField()
     mentor_name = serializers.CharField(source='mentor.full_name', read_only=True)
     current_students_count = serializers.IntegerField(read_only=True)
     available_seats = serializers.IntegerField(read_only=True)
@@ -14,6 +14,23 @@ class GroupBookingSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(read_only=True)
     can_accept_bookings = serializers.BooleanField(read_only=True)
     days_since_start = serializers.IntegerField(read_only=True, allow_null=True)
+    
+    def get_speciality_display(self, obj):
+        """Return Uzbek translation for speciality"""
+        speciality_map = {
+            'revit_architecture': 'Revit Architecture',
+            'revit_structure': 'Revit Structure',
+            'tekla_structure': 'Tekla Structure',
+        }
+        return speciality_map.get(obj.speciality_id, obj.speciality_id)
+    
+    def get_dates_display(self, obj):
+        """Return Uzbek translation for dates"""
+        dates_map = {
+            'mon_wed_fri': 'Dushanba - Chorshanba - Juma',
+            'tue_thu_sat': 'Seshanba - Payshanba - Shanba',
+        }
+        return dates_map.get(obj.dates, obj.dates)
     
     class Meta:
         model = Group
@@ -81,12 +98,29 @@ class StudentBookingSerializer(serializers.Serializer):
 
 class AlternativeGroupSuggestionSerializer(serializers.ModelSerializer):
     """Serializer for suggesting alternative groups."""
-    speciality_display = serializers.CharField(source='get_speciality_id_display', read_only=True)
-    dates_display = serializers.CharField(source='get_dates_display', read_only=True)
+    speciality_display = serializers.SerializerMethodField()
+    dates_display = serializers.SerializerMethodField()
     mentor_name = serializers.CharField(source='mentor.full_name', read_only=True)
     available_seats = serializers.IntegerField(read_only=True)
     is_planned = serializers.BooleanField(read_only=True)
     starting_date = serializers.DateField(read_only=True)
+    
+    def get_speciality_display(self, obj):
+        """Return Uzbek translation for speciality"""
+        speciality_map = {
+            'revit_architecture': 'Revit Architecture',
+            'revit_structure': 'Revit Structure',
+            'tekla_structure': 'Tekla Structure',
+        }
+        return speciality_map.get(obj.speciality_id, obj.speciality_id)
+    
+    def get_dates_display(self, obj):
+        """Return Uzbek translation for dates"""
+        dates_map = {
+            'mon_wed_fri': 'Dushanba - Chorshanba - Juma',
+            'tue_thu_sat': 'Seshanba - Payshanba - Shanba',
+        }
+        return dates_map.get(obj.dates, obj.dates)
     
     class Meta:
         model = Group

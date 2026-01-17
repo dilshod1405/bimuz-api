@@ -10,4 +10,7 @@ urlpatterns = [
     path('callback/', views.payment_callback, name='payment-callback'),
     path('webhook/', views.payment_webhook, name='payment-webhook'),
     path('check-status/', views.CheckInvoiceStatusView.as_view(), name='check-status'),
+    
+    # Employee invoice management endpoints
+    path('employee-invoices/', views.EmployeeInvoiceListView.as_view(), name='employee-invoice-list'),
 ]

@@ -79,8 +79,18 @@ class Group(BaseModel):
         ordering = ['-created_at']
 
     def __str__(self):
-        speciality_display = getattr(self, 'get_speciality_id_display', lambda: self.speciality_id)()
-        dates_display = getattr(self, 'get_dates_display', lambda: self.dates)()
+        # Use Uzbek translations for display
+        speciality_map = {
+            'revit_architecture': 'Revit Architecture',
+            'revit_structure': 'Revit Structure',
+            'tekla_structure': 'Tekla Structure',
+        }
+        dates_map = {
+            'mon_wed_fri': 'Dushanba - Chorshanba - Juma',
+            'tue_thu_sat': 'Seshanba - Payshanba - Shanba',
+        }
+        speciality_display = speciality_map.get(self.speciality_id, self.speciality_id)
+        dates_display = dates_map.get(self.dates, self.dates)
         return f"{speciality_display} - {dates_display}"
 
     def clean(self):

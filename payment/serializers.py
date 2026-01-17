@@ -7,8 +7,20 @@ class InvoiceSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     student_phone = serializers.CharField(source='student.phone', read_only=True)
     group_name = serializers.CharField(source='group.__str__', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status_display = serializers.SerializerMethodField()
     is_paid = serializers.BooleanField(read_only=True)
+    
+    def get_status_display(self, obj):
+        """Return Uzbek translation for status"""
+        status_map = {
+            'created': 'Yaratilgan',
+            'pending': 'To\'lov kutilmoqda',
+            'paid': 'To\'langan',
+            'cancelled': 'Bekor qilingan',
+            'refunded': 'Qaytarilgan',
+            'expired': 'Muddati o\'tgan',
+        }
+        return status_map.get(obj.status, obj.status)
 
     class Meta:
         model = Invoice

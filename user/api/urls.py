@@ -9,6 +9,10 @@ from user.api.employee_views import (
     EmployeeListView,
     EmployeeRetrieveUpdateView
 )
+from user.api.student_management_views import (
+    StudentListView,
+    StudentRetrieveUpdateView
+)
 from user.api.student_views import (
     StudentRegistrationView,
     StudentLoginView,
@@ -27,6 +31,9 @@ urlpatterns = [
     
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
     path('employees/<int:pk>/', EmployeeRetrieveUpdateView.as_view(), name='employee-retrieve-update'),
+    
+    path('students/', StudentListView.as_view(), name='student-list'),
+    path('students/<int:pk>/', StudentRetrieveUpdateView.as_view(), name='student-retrieve-update'),
     
     path('students/register/', StudentRegistrationView.as_view(), name='student-register'),
     path('students/login/', StudentLoginView.as_view(), name='student-login'),

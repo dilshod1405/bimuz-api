@@ -37,8 +37,26 @@ class IsDeveloperOrAdministrator(permissions.BasePermission):
             target_role = obj.role if hasattr(obj, 'role') else None
             
             if target_role in ['dasturchi', 'direktor']:
-                raise PermissionDenied('Administrator cannot update Director or Developer roles.')
+                raise PermissionDenied('Administrator Direktor yoki Dasturchi rollarini yangilay olmaydi.')
             
             return True
         
         return False
+
+
+class IsEmployee(permissions.BasePermission):
+    """Permission to allow any employee to read, but only Developer/Administrator to write"""
+    def has_permission(self, request, view):  # type: ignore
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        if not hasattr(request.user, 'employee_profile'):
+            return False
+        
+        # All employees can read (GET)
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Only Developer and Administrator can write (POST, PUT, PATCH, DELETE)
+        role = request.user.employee_profile.role
+        return role in ['dasturchi', 'administrator']

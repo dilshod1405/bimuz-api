@@ -567,12 +567,12 @@ class StudentGroupChangeView(generics.GenericAPIView):
                             group=new_group,
                             amount=new_invoice_amount,
                             status=InvoiceStatus.CREATED,
-                            notes=f"First installment for group change. Old group: {old_group.id} ({old_price} UZS), "
-                                  f"New group: {new_group.id} ({new_price} UZS). "
-                                  f"Price difference: +{price_difference} UZS. "
-                                  f"Total paid for old group: {total_paid} UZS. "
-                                  f"Remaining to pay: {remaining_amount} UZS. "
-                                  f"Paid invoices from old group are preserved."
+                            notes=f"Guruh o'zgartirish uchun birinchi to'lov. Eski guruh: {old_group.id} ({old_price} so'm), "
+                                  f"Yangi guruh: {new_group.id} ({new_price} so'm). "
+                                  f"Narx farqi: +{price_difference} so'm. "
+                                  f"Eski guruh uchun to'langan: {total_paid} so'm. "
+                                  f"To'lash kerak: {remaining_amount} so'm. "
+                                  f"Eski guruhdan to'langan invoice'lar saqlanadi."
                         )
                         new_invoice_id = new_invoice.id
                     else:
@@ -601,11 +601,11 @@ class StudentGroupChangeView(generics.GenericAPIView):
                             group=new_group,
                             amount=new_invoice_amount,
                             status=InvoiceStatus.CREATED,
-                            notes=f"First installment (50%) for group change. Old group: {old_group.id} ({old_price} UZS), "
-                                  f"New group: {new_group.id} ({new_price} UZS). "
-                                  f"Price difference: {price_difference} UZS (cheaper). "
-                                  f"Total paid for old group: {total_paid} UZS. "
-                                  f"Paid invoices from old group are preserved."
+                            notes=f"Guruh o'zgartirish uchun birinchi to'lov (50%). Eski guruh: {old_group.id} ({old_price} so'm), "
+                                  f"Yangi guruh: {new_group.id} ({new_price} so'm). "
+                                  f"Narx farqi: {price_difference} so'm (arzonroq). "
+                                  f"Eski guruh uchun to'langan: {total_paid} so'm. "
+                                  f"Eski guruhdan to'langan invoice'lar saqlanadi."
                         )
                         new_invoice_id = new_invoice.id
                 else:
@@ -622,10 +622,10 @@ class StudentGroupChangeView(generics.GenericAPIView):
                             group=new_group,
                             amount=new_invoice_amount,
                             status=InvoiceStatus.CREATED,
-                            notes=f"First installment for group change. Old group: {old_group.id}, New group: {new_group.id}. "
-                                  f"Same price ({new_price} UZS). Total paid for old group: {total_paid} UZS. "
-                                  f"Remaining to pay: {remaining} UZS. "
-                                  f"Paid invoices from old group are preserved."
+                            notes=f"Guruh o'zgartirish uchun birinchi to'lov. Eski guruh: {old_group.id}, Yangi guruh: {new_group.id}. "
+                                  f"Bir xil narx ({new_price} so'm). Eski guruh uchun to'langan: {total_paid} so'm. "
+                                  f"To'lash kerak: {remaining} so'm. "
+                                  f"Eski guruhdan to'langan invoice'lar saqlanadi."
                         )
                         new_invoice_id = new_invoice.id
                     else:

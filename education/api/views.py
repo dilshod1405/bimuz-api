@@ -10,26 +10,38 @@ from education.api.serializers import (
     GroupUpdateSerializer,
     AttendanceSerializer
 )
-from education.api.permissions import IsAdministrator, IsAdministratorOrMentor
+from education.api.permissions import IsAdministrator, IsAdministratorOrMentor, CanViewGroups
 from education.api.exceptions import GroupNotFoundError, AttendanceNotFoundError
 from user.api.utils import success_response
 
 
 class GroupListCreateView(generics.ListCreateAPIView):
-    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()  # type: ignore
-    permission_classes = [IsAdministrator]
+    queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()
+    permission_classes = [CanViewGroups]
     
     def get_serializer_class(self):  # type: ignore
         if self.request.method == 'POST':
             return GroupCreateSerializer
         return GroupSerializer
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # If user is Mentor, filter to show only their groups
+        if hasattr(self.request.user, 'employee_profile'):
+            user_role = self.request.user.employee_profile.role
+            if user_role == 'mentor':
+                mentor_employee = self.request.user.employee_profile
+                queryset = queryset.filter(mentor=mentor_employee)
+        
+        return queryset
+    
     @swagger_auto_schema(
-        operation_description="List all groups (Administrator only)",
-        operation_summary="List Groups",
+        operation_description="Ro'yxatdan o'tgan guruhlarni ko'rsatish. Mentor faqat o'z guruhlarini ko'radi, Dasturchi/Direktor/Administrator barcha guruhlarni ko'radi.",
+        operation_summary="Guruhlarni Ro'yxatlash",
         responses={
-            200: openapi.Response('Groups retrieved successfully', GroupSerializer(many=True)),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            200: openapi.Response('Guruhlar muvaffaqiyatli yuklandi.', GroupSerializer(many=True)),
+            403: openapi.Response('Ruxsat yo\'q'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']
@@ -48,13 +60,13 @@ class GroupListCreateView(generics.ListCreateAPIView):
         )
     
     @swagger_auto_schema(
-        operation_description="Create a new group (Administrator only)",
-        operation_summary="Create Group",
+        operation_description="Yangi guruh yaratish (Faqat Dasturchi, Direktor yoki Administrator uchun)",
+        operation_summary="Guruh Yaratish",
         request_body=GroupCreateSerializer,
         responses={
-            201: openapi.Response('Group created successfully', GroupSerializer),
-            400: openapi.Response('Validation errors'),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            201: openapi.Response('Guruh muvaffaqiyatli yaratildi.', GroupSerializer),
+            400: openapi.Response('Validatsiya xatolari'),
+            403: openapi.Response('Ruxsat yo\'q - Faqat Dasturchi, Direktor yoki Administrator'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']
@@ -76,8 +88,20 @@ class GroupListCreateView(generics.ListCreateAPIView):
 
 class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Group.objects.select_related('mentor', 'mentor__user').prefetch_related('students').all()  # type: ignore
-    permission_classes = [IsAdministrator]
+    permission_classes = [CanViewGroups]
     lookup_field = 'pk'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # If user is Mentor, filter to show only their groups
+        if hasattr(self.request.user, 'employee_profile'):
+            user_role = self.request.user.employee_profile.role
+            if user_role == 'mentor':
+                mentor_employee = self.request.user.employee_profile
+                queryset = queryset.filter(mentor=mentor_employee)
+        
+        return queryset
     
     def get_serializer_class(self):  # type: ignore
         if self.request.method in ['PUT', 'PATCH']:
@@ -85,12 +109,12 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return GroupSerializer
     
     @swagger_auto_schema(
-        operation_description="Retrieve a specific group by ID (Administrator only)",
-        operation_summary="Get Group",
+        operation_description="ID bo'yicha guruhni olish. Mentor faqat o'z guruhlarini ko'radi.",
+        operation_summary="Guruhni Olish",
         responses={
-            200: openapi.Response('Group retrieved successfully', GroupSerializer),
-            404: openapi.Response('Group not found'),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            200: openapi.Response('Guruh muvaffaqiyatli yuklandi.', GroupSerializer),
+            404: openapi.Response('Guruh topilmadi'),
+            403: openapi.Response('Ruxsat yo\'q'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']
@@ -104,14 +128,14 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         )
     
     @swagger_auto_schema(
-        operation_description="Update a specific group by ID (Administrator only)",
-        operation_summary="Update Group",
+        operation_description="Guruhni yangilash (Faqat Dasturchi, Direktor yoki Administrator uchun)",
+        operation_summary="Guruhni Yangilash",
         request_body=GroupUpdateSerializer,
         responses={
-            200: openapi.Response('Group updated successfully', GroupSerializer),
-            400: openapi.Response('Validation errors'),
-            404: openapi.Response('Group not found'),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            200: openapi.Response('Guruh muvaffaqiyatli yangilandi.', GroupSerializer),
+            400: openapi.Response('Validatsiya xatolari'),
+            404: openapi.Response('Guruh topilmadi'),
+            403: openapi.Response('Ruxsat yo\'q - Faqat Dasturchi, Direktor yoki Administrator'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']
@@ -120,14 +144,14 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return super().patch(request, *args, **kwargs)
     
     @swagger_auto_schema(
-        operation_description="Update a specific group by ID (Administrator only)",
-        operation_summary="Update Group",
+        operation_description="Guruhni yangilash (Faqat Dasturchi, Direktor yoki Administrator uchun)",
+        operation_summary="Guruhni Yangilash",
         request_body=GroupUpdateSerializer,
         responses={
-            200: openapi.Response('Group updated successfully', GroupSerializer),
-            400: openapi.Response('Validation errors'),
-            404: openapi.Response('Group not found'),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            200: openapi.Response('Guruh muvaffaqiyatli yangilandi.', GroupSerializer),
+            400: openapi.Response('Validatsiya xatolari'),
+            404: openapi.Response('Guruh topilmadi'),
+            403: openapi.Response('Ruxsat yo\'q - Faqat Dasturchi, Direktor yoki Administrator'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']
@@ -136,12 +160,12 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return super().put(request, *args, **kwargs)
     
     @swagger_auto_schema(
-        operation_description="Delete a specific group by ID (Administrator only)",
-        operation_summary="Delete Group",
+        operation_description="Guruhni o'chirish (Faqat Dasturchi, Direktor yoki Administrator uchun)",
+        operation_summary="Guruhni O'chirish",
         responses={
-            204: openapi.Response('Group deleted successfully'),
-            404: openapi.Response('Group not found'),
-            403: openapi.Response('Permission denied - Administrator role required'),
+            200: openapi.Response('Guruh muvaffaqiyatli o\'chirildi.'),
+            404: openapi.Response('Guruh topilmadi'),
+            403: openapi.Response('Ruxsat yo\'q - Faqat Dasturchi, Direktor yoki Administrator'),
         },
         security=[{'Bearer': []}],
         tags=['Groups']

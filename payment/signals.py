@@ -52,7 +52,7 @@ def create_invoice_on_booking(sender, instance: Student, created: bool, **kwargs
                 group=instance.group,
                 amount=first_installment_amount,
                 status=InvoiceStatus.CREATED,
-                notes=f"First installment (50%) for group {instance.group.id}. Total group price: {group_price} UZS."
+                notes=f"Birinchi to'lov (50%) guruh {instance.group.id} uchun. Jami guruh narxi: {group_price} so'm."
             )
             
             logger.info(

@@ -1,7 +1,9 @@
 from rest_framework import status, generics
+from rest_framework.filters import SearchFilter
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.db import transaction
+from django.db.models import Q
 
 from user.models import Employee
 from user.api.employee_serializers import (
@@ -17,6 +19,20 @@ class EmployeeListView(generics.ListAPIView):
     queryset = Employee.objects.select_related('user').all()
     serializer_class = EmployeeListSerializer
     permission_classes = [IsDeveloperOrAdministrator]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.query_params.get('search', None)
+        
+        if search:
+            queryset = queryset.filter(
+                Q(full_name__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(role__icontains=search) |
+                Q(professionality__icontains=search)
+            )
+        
+        return queryset
     
     @swagger_auto_schema(
         operation_description="List all employees (Developer or Administrator only)",
@@ -42,7 +58,7 @@ class EmployeeListView(generics.ListAPIView):
         )
 
 
-class EmployeeRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.select_related('user').all()
     permission_classes = [IsDeveloperOrAdministrator]
     lookup_field = 'pk'
@@ -137,4 +153,45 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         return success_response(
             data=response_serializer.data,
             message='Xodim muvaffaqiyatli yangilandi.'
+        )
+    
+    @swagger_auto_schema(
+        operation_description="Delete a specific employee (Developer or Administrator only). Administrator cannot delete Director or Developer roles.",
+        operation_summary="Delete Employee",
+        responses={
+            200: openapi.Response('Employee deleted successfully'),
+            403: openapi.Response('Permission denied - Cannot delete Director or Developer roles'),
+            404: openapi.Response('Employee not found'),
+        },
+        security=[{'Bearer': []}],
+        tags=['Employee Management']
+    )
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Check if user has permission to delete this specific employee
+        if not hasattr(request.user, 'employee_profile'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Ruxsat yo\'q.')
+        
+        user_role = request.user.employee_profile.role
+        
+        # Administrator cannot delete Director or Developer roles
+        if user_role == 'administrator':
+            target_role = instance.role
+            if target_role in ['dasturchi', 'direktor']:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Administrator Direktor yoki Dasturchi rollarini o\'chira olmaydi.')
+        
+        with transaction.atomic():
+            # Delete the related User if it exists
+            if hasattr(instance, 'user') and instance.user:
+                instance.user.delete()
+            else:
+                # If no user, just delete the employee
+                instance.delete()
+        
+        return success_response(
+            data=None,
+            message='Xodim muvaffaqiyatli o\'chirildi.'
         )
