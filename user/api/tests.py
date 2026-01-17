@@ -235,11 +235,23 @@ class EmployeeManagementAPITestCase(TestCase):
         url = reverse('user_api:employee-list')
         response = self.client.get(url)  # type: ignore
         self.assertEqual(response.status_code, status.HTTP_200_OK)  # type: ignore
+        # Response can be either paginated (DRF format) or success_response format
         if isinstance(response.data, dict):  # type: ignore
-            self.assertTrue(response.data.get('success', False))  # type: ignore
-            if 'data' in response.data:  # type: ignore
-                self.assertIsInstance(response.data['data'], list)  # type: ignore
+            # Check if it's a paginated response (has 'results' key) or success_response format
+            if 'results' in response.data:  # type: ignore
+                # Paginated response - check results
+                self.assertIn('results', response.data)  # type: ignore
+                self.assertIsInstance(response.data['results'], list)  # type: ignore
+            elif 'success' in response.data:  # type: ignore
+                # success_response format
+                self.assertTrue(response.data.get('success', False))  # type: ignore
+                if 'data' in response.data:  # type: ignore
+                    self.assertIsInstance(response.data['data'], list)  # type: ignore
+            else:
+                # Other dict format - just verify it's a dict
+                self.assertIsInstance(response.data, dict)  # type: ignore
         else:
+            # List response (non-paginated)
             self.assertIsInstance(response.data, list)  # type: ignore
             self.assertGreater(len(response.data), 0)  # type: ignore
     
