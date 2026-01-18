@@ -120,6 +120,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 AUTH_USER_MODEL = 'user.User'
 
 CORS_ALLOWED_ORIGINS = [
+    "https://api.bimuz.uz",
+    "https://bimuz.uz",
     "https://employee.bimuz.uz",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -127,6 +129,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.bimuz.uz",
+    "https://bimuz.uz",
+]
+
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
