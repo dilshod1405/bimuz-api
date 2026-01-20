@@ -1,5 +1,8 @@
 """Custom middleware for BIMUZ API."""
+import logging
 from django.utils.deprecation import MiddlewareMixin
+
+logger = logging.getLogger(__name__)
 
 
 class DisableCSRFForAPI(MiddlewareMixin):
@@ -18,5 +21,13 @@ class DisableCSRFForAPI(MiddlewareMixin):
         if request.path.startswith('/api/'):
             # Set a flag to skip CSRF check
             # Django's CsrfViewMiddleware checks this flag
+            setattr(request, '_dont_enforce_csrf_checks', True)
+            logger.info(f"CSRF disabled for API endpoint: {request.path} (method: {request.method})")
+        return None
+    
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        """Additional check to ensure CSRF is disabled for API views."""
+        if request.path.startswith('/api/'):
+            # Ensure the flag is set even if process_request didn't catch it
             setattr(request, '_dont_enforce_csrf_checks', True)
         return None
