@@ -2,6 +2,8 @@ from rest_framework import status, generics, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -20,7 +22,11 @@ User = get_user_model()
 class EmployeeRegistrationView(generics.CreateAPIView):
     serializer_class = EmployeeRegistrationSerializer
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Disable authentication (and CSRF) for this view
+    authentication_classes = []  # Disable authentication for this view
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
     
     @swagger_auto_schema(
         operation_description="Register a new employee account with user and employee profile",
@@ -62,7 +68,11 @@ class EmployeeRegistrationView(generics.CreateAPIView):
 class EmployeeLoginView(generics.GenericAPIView):
     serializer_class = EmployeeLoginSerializer
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Disable authentication (and CSRF) for this view
+    authentication_classes = []  # Disable authentication for this view
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
     
     @swagger_auto_schema(
         operation_description="Authenticate an employee and receive JWT tokens",
