@@ -1,8 +1,16 @@
 """Custom middleware for BIMUZ API."""
 import logging
+import sys
 from django.utils.deprecation import MiddlewareMixin
 
-logger = logging.getLogger(__name__)
+# Use root logger to ensure logs are visible
+logger = logging.getLogger('bimuz.middleware')
+# Also log to stdout for Gunicorn
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 
 class DisableCSRFForAPI(MiddlewareMixin):
@@ -22,7 +30,10 @@ class DisableCSRFForAPI(MiddlewareMixin):
             # Set a flag to skip CSRF check
             # Django's CsrfViewMiddleware checks this flag
             setattr(request, '_dont_enforce_csrf_checks', True)
-            logger.info(f"CSRF disabled for API endpoint: {request.path} (method: {request.method})")
+            # Log to both logger and stdout
+            msg = f"CSRF disabled for API endpoint: {request.path} (method: {request.method})"
+            logger.info(msg)
+            print(f"[DisableCSRFForAPI] {msg}")  # Also print to stdout for Gunicorn
         return None
     
     def process_view(self, request, view_func, view_args, view_kwargs):
@@ -30,4 +41,7 @@ class DisableCSRFForAPI(MiddlewareMixin):
         if request.path.startswith('/api/'):
             # Ensure the flag is set even if process_request didn't catch it
             setattr(request, '_dont_enforce_csrf_checks', True)
+            msg = f"CSRF disabled in process_view for: {request.path}"
+            logger.debug(msg)
+            print(f"[DisableCSRFForAPI] {msg}")  # Also print to stdout for Gunicorn
         return None
