@@ -1,0 +1,22 @@
+"""Custom middleware for BIMUZ API."""
+from django.utils.deprecation import MiddlewareMixin
+
+
+class DisableCSRFForAPI(MiddlewareMixin):
+    """
+    Middleware to disable CSRF protection for API endpoints.
+    
+    API endpoints use JWT authentication instead of CSRF tokens,
+    so CSRF protection is not needed for /api/ routes.
+    This middleware must be placed BEFORE CsrfViewMiddleware in MIDDLEWARE.
+    """
+    
+    def process_request(self, request):
+        """Exempt API routes from CSRF protection."""
+        # Check if the request path starts with /api/
+        # This includes all API endpoints: /api/v1/auth/, /api/v1/education/, etc.
+        if request.path.startswith('/api/'):
+            # Set a flag to skip CSRF check
+            # Django's CsrfViewMiddleware checks this flag
+            setattr(request, '_dont_enforce_csrf_checks', True)
+        return None
