@@ -2,6 +2,8 @@ from rest_framework import status, generics, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -17,6 +19,7 @@ from user.api.exceptions import EmployeeNotFoundError
 User = get_user_model()
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EmployeeRegistrationView(generics.CreateAPIView):
     serializer_class = EmployeeRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -58,6 +61,7 @@ class EmployeeRegistrationView(generics.CreateAPIView):
         )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EmployeeLoginView(generics.GenericAPIView):
     serializer_class = EmployeeLoginSerializer
     permission_classes = [permissions.AllowAny]
