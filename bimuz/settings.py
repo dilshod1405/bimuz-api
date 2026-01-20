@@ -121,6 +121,7 @@ AUTH_USER_MODEL = 'user.User'
 
 CORS_ALLOWED_ORIGINS = [
     "https://api.bimuz.uz",
+    "https://bot.bimuz.uz",
     "https://bimuz.uz",
     "https://employee.bimuz.uz",
     "http://localhost:3000",
@@ -133,6 +134,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://api.bimuz.uz",
     "https://bimuz.uz",
+    "https://bot.bimuz.uz",
 ]
 
 
