@@ -11,14 +11,20 @@ from user.api.employee_serializers import (
     EmployeeDetailSerializer,
     EmployeeUpdateSerializer
 )
-from user.api.permissions import IsDeveloperOrAdministrator
+from user.api.permissions import IsDeveloperOrAdministrator, IsEmployee
 from user.api.utils import success_response
 
 
 class EmployeeListView(generics.ListAPIView):
+    """
+    List view for employees.
+    All authenticated employees can read (GET).
+    Write operations (POST) require Developer, Director, or Administrator role.
+    """
     queryset = Employee.objects.select_related('user').all()
     serializer_class = EmployeeListSerializer
-    permission_classes = [IsDeveloperOrAdministrator]
+    # All employees can read, but only specific roles can create (handled in permission class)
+    permission_classes = [IsEmployee]
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -35,11 +41,11 @@ class EmployeeListView(generics.ListAPIView):
         return queryset
     
     @swagger_auto_schema(
-        operation_description="List all employees (Developer or Administrator only)",
+        operation_description="List all employees. All authenticated employees can read this endpoint.",
         operation_summary="List Employees",
         responses={
             200: openapi.Response('Employees retrieved successfully', EmployeeListSerializer(many=True)),
-            403: openapi.Response('Permission denied - Developer or Administrator role required'),
+            403: openapi.Response('Permission denied - Authentication required'),
         },
         security=[{'Bearer': []}],
         tags=['Employee Management']
@@ -71,9 +77,16 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
                 return
             
             user_role = request.user.employee_profile.role
+            target_role = obj.role
             
-            if user_role == 'administrator':
-                target_role = obj.role
+            # Director cannot update Developer
+            if user_role == 'direktor':
+                if target_role == 'dasturchi':
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('Direktor Dasturchi rolini yangilay olmaydi.')
+            
+            # Administrator cannot update Director or Developer
+            elif user_role == 'administrator':
                 if target_role in ['dasturchi', 'direktor']:
                     from rest_framework.exceptions import PermissionDenied
                     raise PermissionDenied('Administrator Direktor yoki Dasturchi rollarini yangilay olmaydi.')
@@ -84,7 +97,7 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
         return EmployeeDetailSerializer
     
     @swagger_auto_schema(
-        operation_description="Retrieve a specific employee by ID (Developer or Administrator only)",
+        operation_description="Retrieve a specific employee by ID (Developer, Director, or Administrator only)",
         operation_summary="Get Employee",
         responses={
             200: openapi.Response('Employee retrieved successfully', EmployeeDetailSerializer),
@@ -103,7 +116,7 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
         )
     
     @swagger_auto_schema(
-        operation_description="Update a specific employee (Developer or Administrator only). Administrator cannot update Director or Developer roles.",
+        operation_description="Update a specific employee (Developer, Director, or Administrator only). Director cannot update Developer. Administrator cannot update Director or Developer roles.",
         operation_summary="Update Employee",
         request_body=EmployeeUpdateSerializer,
         responses={
@@ -119,7 +132,7 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
         return super().patch(request, *args, **kwargs)
     
     @swagger_auto_schema(
-        operation_description="Update a specific employee (Developer or Administrator only). Administrator cannot update Director or Developer roles.",
+        operation_description="Update a specific employee (Developer, Director, or Administrator only). Director cannot update Developer. Administrator cannot update Director or Developer roles.",
         operation_summary="Update Employee",
         request_body=EmployeeUpdateSerializer,
         responses={
@@ -156,7 +169,7 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
         )
     
     @swagger_auto_schema(
-        operation_description="Delete a specific employee (Developer or Administrator only). Administrator cannot delete Director or Developer roles.",
+        operation_description="Delete a specific employee (Developer, Director, or Administrator only). Director cannot delete Developer. Administrator cannot delete Director or Developer roles.",
         operation_summary="Delete Employee",
         responses={
             200: openapi.Response('Employee deleted successfully'),
@@ -175,10 +188,16 @@ class EmployeeRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
             raise PermissionDenied('Ruxsat yo\'q.')
         
         user_role = request.user.employee_profile.role
+        target_role = instance.role
+        
+        # Director cannot delete Developer
+        if user_role == 'direktor':
+            if target_role == 'dasturchi':
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Direktor Dasturchi rolini o\'chira olmaydi.')
         
         # Administrator cannot delete Director or Developer roles
-        if user_role == 'administrator':
-            target_role = instance.role
+        elif user_role == 'administrator':
             if target_role in ['dasturchi', 'direktor']:
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied('Administrator Direktor yoki Dasturchi rollarini o\'chira olmaydi.')

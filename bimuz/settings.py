@@ -39,7 +39,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'bimuz.middleware.DisableCSRFForAPI',  # Custom middleware to disable CSRF for API routes (must be before CsrfViewMiddleware)
+    'bimuz.middleware.DisableCSRFForAPI',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

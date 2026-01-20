@@ -15,6 +15,11 @@ class IsAdministrator(permissions.BasePermission):
 
 
 class IsAdministratorOrMentor(permissions.BasePermission):
+    """
+    Permission class for attendance operations.
+    - All employees can read (GET)
+    - Only Administrator and Mentor can create/update/delete
+    """
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
@@ -22,8 +27,13 @@ class IsAdministratorOrMentor(permissions.BasePermission):
         if not hasattr(request.user, 'employee_profile'):
             return False
         
+        # All employees can read
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Only Administrator and Mentor can write
         role = request.user.employee_profile.role
-        return role in ['administrator', 'mentor', 'dasturchi']
+        return role in ['administrator', 'mentor', 'dasturchi', 'direktor']
 
 
 class IsDeveloperDirectorOrAdministrator(permissions.BasePermission):

@@ -201,11 +201,11 @@ class AttendanceListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAdministratorOrMentor]
     
     @swagger_auto_schema(
-        operation_description="List all attendances (Administrator or Mentor only)",
+        operation_description="List all attendances. All authenticated employees can read. Only Administrator and Mentor can create.",
         operation_summary="List Attendances",
         responses={
             200: openapi.Response('Attendances retrieved successfully', AttendanceSerializer(many=True)),
-            403: openapi.Response('Permission denied - Administrator or Mentor role required'),
+            403: openapi.Response('Permission denied - Authentication required'),
         },
         security=[{'Bearer': []}],
         tags=['Attendances']

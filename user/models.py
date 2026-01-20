@@ -52,6 +52,7 @@ class Role(models.TextChoices):
     SALES_AGENT = ('sotuv_agenti', 'Sotuv agenti')
     MENTOR = ('mentor', 'Mentor')
     ASSISTANT = ('assistent', 'Assistent')
+    ACCOUNTANT = ('buxgalter', 'Buxgalter')
 
 
 class Source(models.TextChoices):

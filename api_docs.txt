@@ -346,6 +346,7 @@ Employee Roles:
     - "sotuv_agenti"   -> "Sotuv agenti"
     - "mentor"         -> "Mentor"
     - "assistent"      -> "Assistent"
+    - "buxgalter"      -> "Buxgalter"
 
 Professionality Values (for Mentors only):
     - "revit_architecture" -> "Revit Architecture"

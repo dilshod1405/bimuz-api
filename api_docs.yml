@@ -848,6 +848,8 @@ enums:
         display: "Mentor"
       - key: "assistent"
         display: "Assistent"
+      - key: "buxgalter"
+        display: "Buxgalter"
   
   speciality_values:
     description: "Speciality Values (for Mentors only)"
