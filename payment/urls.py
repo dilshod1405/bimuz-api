@@ -5,6 +5,7 @@ from payment.reports_views import (
     EmployeeSalaryView,
     MarkSalaryAsPaidView,
     MarkMentorPaymentAsPaidView,
+    BalanceView,
 )
 
 app_name = 'payment'
@@ -23,6 +24,7 @@ urlpatterns = [
     
     # Reports endpoints
     path('reports/monthly/', MonthlyReportsView.as_view(), name='monthly-reports'),
+    path('reports/balance/', BalanceView.as_view(), name='balance'),
     path('reports/salary/', EmployeeSalaryView.as_view(), name='employee-salary'),
     path('reports/salary/mark-paid/', MarkSalaryAsPaidView.as_view(), name='mark-salary-as-paid'),
     path('reports/mentor-payment/mark-paid/', MarkMentorPaymentAsPaidView.as_view(), name='mark-mentor-payment-as-paid'),

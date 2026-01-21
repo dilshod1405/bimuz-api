@@ -316,9 +316,83 @@ class MonthlyReportsView(generics.GenericAPIView):
             
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in getMonthlyReports: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Internal server error: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class BalanceView(generics.GenericAPIView):
+    """
+    Get overall balance (all-time income minus expenses).
+    
+    Balance = Total paid invoices - (Paid mentor payments + Paid employee salaries)
+    
+    Only accessible to: dasturchi, direktor, administrator, buxgalter
+    """
+    permission_classes = [IsAuthenticated]
+
+    def check_permissions(self, request):
+        """Only Developer, Director, Administrator, and Accountant can view balance"""
+        super().check_permissions(request)
+        if not hasattr(request.user, 'employee_profile'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only employees can view balance")
+        role = request.user.employee_profile.role
+        if role not in ['dasturchi', 'direktor', 'administrator', 'buxgalter']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to view balance")
+
+    @swagger_auto_schema(
+        operation_description="Get overall balance (all-time income minus expenses). Only Developer, Director, Administrator, and Accountant can access.",
+        operation_summary="Get Balance",
+        responses={
+            200: openapi.Response('Balance information'),
+            403: openapi.Response('Permission denied'),
+        },
+        tags=['Reports']
+    )
+    def get(self, request):
+        self.check_permissions(request)
+        
+        try:
+            # Total income: sum of all paid invoices
+            total_income = Invoice.objects.filter(
+                status=InvoiceStatus.PAID
+            ).aggregate(
+                total=Sum('amount')
+            )['total'] or Decimal('0')
+            
+            # Total expenses: paid mentor payments + paid employee salaries
+            total_paid_mentor_payments = MentorPayment.objects.filter(
+                is_paid=True
+            ).aggregate(
+                total=Sum('amount')
+            )['total'] or Decimal('0')
+            
+            total_paid_employee_salaries = EmployeeSalary.objects.filter(
+                is_paid=True
+            ).aggregate(
+                total=Sum('amount')
+            )['total'] or Decimal('0')
+            
+            total_expenses = total_paid_mentor_payments + total_paid_employee_salaries
+            
+            # Balance = income - expenses
+            balance = Decimal(str(total_income)) - total_expenses
+            
+            response_data = {
+                'total_income': float(total_income),
+                'total_expenses': float(total_expenses),
+                'total_paid_mentor_payments': float(total_paid_mentor_payments),
+                'total_paid_employee_salaries': float(total_paid_employee_salaries),
+                'balance': float(balance),
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error calculating balance: {str(e)}", exc_info=True)
             return Response(
                 {'error': f'Internal server error: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
