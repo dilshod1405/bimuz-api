@@ -18,11 +18,11 @@ Backend for BIMUZ education management platform. **All sensitive logic (RBAC, fi
 
 ```mermaid
 flowchart LR
-  D[bimuz-dashboard] -->|JWT| API[bimuz-api (DRF)]
-  B[bimuz-bot (aiogram)] -->|JWT| API
-  API --> DB[(PostgreSQL)]
-  API --> R[(Redis)]
-  API -->|webhook/status| MC[Multicard]
+  D["bimuz-dashboard"] -->|JWT| API["bimuz-api (DRF)"];
+  B["bimuz-bot (aiogram)"] -->|JWT| API;
+  API --> DB[("PostgreSQL")];
+  API --> R[("Redis")];
+  API -->|webhook/status| MC["Multicard"];
 ```
 
 ## Core domain
@@ -113,11 +113,11 @@ Director remaining is computed from monthly invoices:
 
 ```mermaid
 flowchart TB
-  P[Paid student invoices in month] --> R[MonthlyReportsView calculates totals]
-  R --> M[Mentor earnings + director share]
-  R --> S[Non-mentor salaries]
-  M -->|mark paid| MP[MentorPayment]
-  S -->|mark paid| ES[EmployeeSalary]
+  P["Paid student invoices in month"] --> R["MonthlyReportsView calculates totals"];
+  R --> M["Mentor earnings + director share"];
+  R --> S["Non-mentor salaries"];
+  M -->|mark paid| MP["MentorPayment"];
+  S -->|mark paid| ES["EmployeeSalary"];
 ```
 
 ## Attendances
